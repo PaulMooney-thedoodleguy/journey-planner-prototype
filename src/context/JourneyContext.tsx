@@ -63,7 +63,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
 
     if (selectedJourney.requiresMultipleTickets && selectedJourney.tickets) {
       const groupId = Date.now();
-      tickets = selectedJourney.tickets.map((t) => ({
+      tickets = selectedJourney.tickets.map((t, idx) => ({
         id: crypto.randomUUID(),
         reference: generateReference(),
         journey: selectedJourney,

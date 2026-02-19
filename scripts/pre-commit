@@ -1,0 +1,45 @@
+#!/bin/sh
+# Pre-commit hook: blocks commits that contain potential secret keys.
+# Install by running: npm run setup:hooks
+
+STAGED=$(git diff --cached --name-only)
+
+if [ -z "$STAGED" ]; then
+  exit 0
+fi
+
+FAILED=0
+
+# Patterns that suggest a real secret
+SECRET_PATTERNS="AIza[0-9A-Za-z_-]{35}|AKIA[0-9A-Z]{16}|sk-[a-zA-Z0-9]{32,}|ghp_[a-zA-Z0-9]{36}|ghs_[a-zA-Z0-9]{36}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY"
+
+for FILE in $STAGED; do
+  # Skip binary files, lockfiles, and the example env
+  case "$FILE" in
+    *.lock|*.png|*.jpg|*.ico|.env.example) continue ;;
+  esac
+
+  if git show ":$FILE" 2>/dev/null | grep -Eq "$SECRET_PATTERNS"; then
+    echo "❌ Potential secret detected in: $FILE"
+    FAILED=1
+  fi
+done
+
+# Block .env files (except .env.example) from ever being staged
+for FILE in $STAGED; do
+  case "$FILE" in
+    .env|.env.local|.env.*.local|.env.development|.env.production|.env.staging)
+      echo "❌ Blocked: $FILE must not be committed. Add it to .gitignore."
+      FAILED=1
+      ;;
+  esac
+done
+
+if [ "$FAILED" -eq 1 ]; then
+  echo ""
+  echo "Commit blocked. Remove secrets before committing."
+  echo "If this is a false positive, check scripts/pre-commit to adjust patterns."
+  exit 1
+fi
+
+exit 0

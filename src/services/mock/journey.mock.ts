@@ -9,6 +9,11 @@ const PASSENGER_MULTIPLIERS: Record<string, number> = {
 };
 
 export class MockJourneyService implements IJourneyService {
+  async getJourneyById(id: number): Promise<Journey | null> {
+    await new Promise(r => setTimeout(r, 150));
+    return MOCK_JOURNEYS.find(j => j.id === id) ?? null;
+  }
+
   async searchJourneys(params: JourneySearchParams): Promise<Journey[]> {
     // Simulate network latency — catches loading-state issues early
     await new Promise(r => setTimeout(r, 400));

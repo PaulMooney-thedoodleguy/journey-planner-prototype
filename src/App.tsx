@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import { JourneyProvider } from './context/JourneyContext';
 import { DeparturesProvider } from './context/DeparturesContext';
 import BottomNav from './components/layout/BottomNav';
+import UpdatePrompt from './components/layout/UpdatePrompt';
 
 import SearchPage from './pages/home/SearchPage';
 import ResultsPage from './pages/home/ResultsPage';
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <BottomNav />
+            <UpdatePrompt />
           </DeparturesProvider>
         </JourneyProvider>
       </AppProvider>

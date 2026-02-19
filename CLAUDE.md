@@ -19,7 +19,7 @@ npm run typecheck     # TypeScript check (no emit)
 npm run setup:hooks   # Install the pre-commit secret-scanning hook
 ```
 
-**No test suite exists.** Verify changes with `npm run typecheck` and `npm run build`.
+A Vitest unit/component suite and Playwright E2E suite were added in the QA sprint (see `vitest.config.ts` and `playwright.config.ts`). Verify changes with `npm run typecheck` and `npm run build`.
 
 ---
 
@@ -253,7 +253,6 @@ If a false positive occurs, adjust the `SECRET_PATTERNS` regex in `scripts/pre-c
 
 ## Known Limitations / Future Work
 
-- No test suite — `npm run typecheck` and a manual browser check are the only verification tools
 - Real TfL / National Rail API integrations are not implemented (all services are mocked)
 - Google Maps integration is wired up in `MapViewProps` but the active implementation uses react-leaflet with OpenStreetMap tiles
-- `JourneyContext.completePayment` references `idx` in the multi-ticket branch without declaring it (pre-existing bug — the variable should be the `.map((t, idx) => …)` parameter)
+- PWA service worker is only active in production builds (`devOptions.enabled: false`); test offline behaviour with `npm run build && npm run preview`

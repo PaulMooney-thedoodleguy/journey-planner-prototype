@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { PurchasedTicket } from '../types';
+import { loadTickets, saveTickets } from '../utils/ticketStorage';
 
 interface AppContextValue {
   purchasedTickets: PurchasedTicket[];
@@ -9,10 +10,14 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
+  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>(loadTickets);
 
   const addTickets = useCallback((tickets: PurchasedTicket[]) => {
-    setPurchasedTickets(prev => [...prev, ...tickets]);
+    setPurchasedTickets(prev => {
+      const updated = [...prev, ...tickets];
+      saveTickets(updated);
+      return updated;
+    });
   }, []);
 
   return (

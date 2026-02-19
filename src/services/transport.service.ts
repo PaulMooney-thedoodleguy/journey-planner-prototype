@@ -5,6 +5,7 @@ import type { Journey, JourneySearchParams, Station, Departure, Disruption } fro
 
 export interface IJourneyService {
   searchJourneys(params: JourneySearchParams): Promise<Journey[]>;
+  getJourneyById(id: number): Promise<Journey | null>;
 }
 
 export interface IDeparturesService {

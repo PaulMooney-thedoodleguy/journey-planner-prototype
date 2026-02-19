@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Train, Search, MapPin } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import MapView from '../../components/map/MapView';
 import PageShell from '../../components/layout/PageShell';
+import StationAutocomplete from '../../components/journey/StationAutocomplete';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { JourneySearchParams, MapMarker } from '../../types';
@@ -36,6 +37,9 @@ export default function SearchPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showMap, setShowMap] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+
+  // Ref for programmatic focus on GDS error summary (WCAG 3.3.1)
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   // Fallback: if animationend never fires (e.g. prefers-reduced-motion, background tab),
   // force the transition to complete after 400ms so the state machine can't get stuck.
@@ -92,14 +96,20 @@ export default function SearchPage() {
     if (!localParams.date) errors.date = 'Please select a date';
     if (!localParams.time) errors.time = 'Please select a time';
     setFormErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      // Defer focus until after React has re-rendered the error summary into the DOM
+      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+      return;
+    }
 
     const ok = await submitSearch(localParams);
     if (ok) navigate('/results');
   };
 
+  // w-full is correct for autocomplete inputs (the StationAutocomplete wrapper handles flex-1);
+  // also used for date/time inputs which sit inside a grid cell.
   const inputClass = (field: string) =>
-    `flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
+    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <PageShell fullHeight>
@@ -166,19 +176,39 @@ export default function SearchPage() {
                   </div>
 
                   <div className="space-y-6">
+                    {/* GDS-style error summary — appears at top of form, receives focus on submit failure (WCAG 3.3.1) */}
+                    {Object.keys(formErrors).length > 0 && (
+                      <div
+                        ref={errorSummaryRef}
+                        aria-labelledby="error-summary-title"
+                        tabIndex={-1}
+                        className="bg-red-50 border border-red-400 rounded-lg p-4"
+                      >
+                        <h2 id="error-summary-title" className="text-sm font-semibold text-red-800 mb-2">There is a problem</h2>
+                        <ul className="space-y-1">
+                          {Object.entries(formErrors).map(([field, msg]) => (
+                            <li key={field}>
+                              <a href={`#${field}-input`} className="text-sm text-red-700 underline hover:text-red-900">
+                                {msg}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     {/* From */}
                     <div>
                       <label htmlFor="from-input" className="block text-sm font-medium text-gray-700 mb-2">From</label>
                       <div className="flex gap-2">
-                        <input
+                        <StationAutocomplete
                           id="from-input"
-                          type="text"
                           value={localParams.from}
-                          onChange={e => updateField('from', e.target.value)}
+                          onChange={v => updateField('from', v)}
                           placeholder="e.g. London Kings Cross"
-                          aria-describedby={formErrors.from ? 'from-error' : undefined}
-                          aria-invalid={!!formErrors.from}
-                          className={inputClass('from')}
+                          errorId={formErrors.from ? 'from-error' : undefined}
+                          hasError={!!formErrors.from}
+                          inputClassName={inputClass('from')}
                         />
                         <button onClick={swapLocations} aria-label="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -193,15 +223,14 @@ export default function SearchPage() {
                     <div>
                       <label htmlFor="to-input" className="block text-sm font-medium text-gray-700 mb-2">To</label>
                       <div className="flex gap-2">
-                        <input
+                        <StationAutocomplete
                           id="to-input"
-                          type="text"
                           value={localParams.to}
-                          onChange={e => updateField('to', e.target.value)}
+                          onChange={v => updateField('to', v)}
                           placeholder="e.g. Manchester Piccadilly"
-                          aria-describedby={formErrors.to ? 'to-error' : undefined}
-                          aria-invalid={!!formErrors.to}
-                          className={inputClass('to')}
+                          errorId={formErrors.to ? 'to-error' : undefined}
+                          hasError={!!formErrors.to}
+                          inputClassName={inputClass('to')}
                         />
                         {/* Route through handleToggle to play the exit animation before showing map */}
                         <button onClick={handleToggle} className="bg-brand hover:bg-brand-hover text-white px-4 py-3 rounded-lg transition flex items-center gap-2">
@@ -223,7 +252,7 @@ export default function SearchPage() {
                             onChange={e => updateField('date', e.target.value)}
                             aria-describedby={formErrors.date ? 'date-error' : undefined}
                             aria-invalid={!!formErrors.date}
-                            className={`${inputClass('date').replace('flex-1 ', '')} focus:outline-none`}
+                            className={inputClass('date')}
                           />
                           {formErrors.date && <p id="date-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.date}</p>}
                         </div>
@@ -236,7 +265,7 @@ export default function SearchPage() {
                             onChange={e => updateField('time', e.target.value)}
                             aria-describedby={formErrors.time ? 'time-error' : undefined}
                             aria-invalid={!!formErrors.time}
-                            className={`${inputClass('time').replace('flex-1 ', '')} focus:outline-none`}
+                            className={inputClass('time')}
                           />
                           {formErrors.time && <p id="time-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.time}</p>}
                         </div>

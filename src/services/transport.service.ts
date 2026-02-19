@@ -14,6 +14,7 @@ export interface IDeparturesService {
 
 export interface IDisruptionsService {
   getDisruptions(): Promise<Disruption[]>;
+  getDisruptionsForRoute(from: string, to: string, operator: string): Promise<Disruption[]>;
 }
 
 // ─── Factory functions ────────────────────────────────────────

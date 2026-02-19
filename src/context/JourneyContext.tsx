@@ -14,6 +14,7 @@ interface JourneyContextValue {
   setSelectedJourney: (j: Journey | null) => void;
   passengerDetails: PassengerDetails;
   setPassengerDetails: (d: PassengerDetails) => void;
+  lastBookingRef: string | null;
   submitSearch: (params: JourneySearchParams) => Promise<boolean>;
   completePayment: (ticketType: TicketType) => PurchasedTicket[];
   resetJourney: () => void;
@@ -38,6 +39,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const [passengerDetails, setPassengerDetails] = useState<PassengerDetails>({
     name: '', email: '',
   });
+  const [lastBookingRef, setLastBookingRef] = useState<string | null>(null);
 
   const submitSearch = async (params: JourneySearchParams): Promise<boolean> => {
     setIsSearching(true);
@@ -93,6 +95,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     }
 
     addTickets(tickets);
+    setLastBookingRef(tickets[0].reference);
     return tickets;
   };
 
@@ -100,6 +103,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     setSearchParams(prev => ({ ...prev, to: '' }));
     setSelectedJourney(null);
     setPassengerDetails({ name: '', email: '' });
+    setLastBookingRef(null);
   };
 
   return (
@@ -108,6 +112,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       journeyResults, isSearching, searchError,
       selectedJourney, setSelectedJourney,
       passengerDetails, setPassengerDetails,
+      lastBookingRef,
       submitSearch, completePayment, resetJourney,
     }}>
       {children}

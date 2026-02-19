@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
@@ -11,7 +11,15 @@ export default function CheckoutPage() {
   const { selectedJourney, searchParams, passengerDetails, setPassengerDetails, completePayment } = useJourneyContext();
   const [cardNumber, setCardNumber] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
   usePageTitle('Passenger Details');
+
+  // Maps internal field keys to their input element IDs for error summary links
+  const fieldToId: Record<string, string> = {
+    name: 'name-input',
+    email: 'email-input',
+    cardNumber: 'card-input',
+  };
 
   useEffect(() => {
     if (!selectedJourney) navigate('/');
@@ -44,7 +52,10 @@ export default function CheckoutPage() {
       newErrors.cardNumber = 'Please enter a valid card number';
     }
     setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    if (Object.keys(newErrors).length > 0) {
+      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+      return;
+    }
 
     completePayment(searchParams.ticketType);
     navigate('/confirmation');
@@ -61,6 +72,26 @@ export default function CheckoutPage() {
 
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Passenger Details</h2>
+        {/* GDS-style error summary — receives focus on submit failure (WCAG 3.3.1) */}
+        {Object.keys(errors).length > 0 && (
+          <div
+            ref={errorSummaryRef}
+            aria-labelledby="checkout-error-summary-title"
+            tabIndex={-1}
+            className="bg-red-50 border border-red-400 rounded-lg p-4 mb-6"
+          >
+            <h2 id="checkout-error-summary-title" className="text-sm font-semibold text-red-800 mb-2">There is a problem</h2>
+            <ul className="space-y-1">
+              {Object.entries(errors).map(([field, msg]) => (
+                <li key={field}>
+                  <a href={`#${fieldToId[field] ?? field}`} className="text-sm text-red-700 underline hover:text-red-900">
+                    {msg}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {/* form element enables Enter-to-submit and correct screen reader semantics (WCAG 4.1.2) */}
         <form onSubmit={handlePayment} noValidate className="space-y-6">
           <div>

@@ -47,6 +47,15 @@ export default function DepartureBoardPage() {
         </div>
       )}
 
+      {/* sr-only aria-live region — announces loading state and count to screen readers (WCAG 4.1.3) */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isDeparturesLoading
+          ? 'Loading departures…'
+          : departures.length === 0
+          ? 'No departures found'
+          : `${departures.length} departure${departures.length !== 1 ? 's' : ''} listed`}
+      </div>
+
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header — 3 cols on mobile, 4 on sm+ */}
         <div className="bg-brand text-white p-3 sm:p-4">

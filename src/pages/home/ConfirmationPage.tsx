@@ -6,7 +6,7 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function ConfirmationPage() {
   const navigate = useNavigate();
-  const { passengerDetails, resetJourney } = useJourneyContext();
+  const { passengerDetails, resetJourney, lastBookingRef } = useJourneyContext();
   usePageTitle('Booking Confirmed');
 
   const handleBookAnother = () => {
@@ -22,6 +22,11 @@ export default function ConfirmationPage() {
             <Check className="w-8 h-8 text-green-600" />
           </div>
           <h2 className="text-3xl font-bold mb-2">Booking Confirmed!</h2>
+          {lastBookingRef && (
+            <p className="text-sm font-mono font-semibold text-gray-800 bg-gray-100 rounded-lg px-4 py-2 mb-3 inline-block tracking-widest">
+              {lastBookingRef}
+            </p>
+          )}
           <p className="text-gray-600 mb-8">
             Your ticket has been sent to {passengerDetails.email || 'your email address'}
           </p>

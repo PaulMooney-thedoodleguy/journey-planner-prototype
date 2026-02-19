@@ -1,5 +1,6 @@
-import { Clock, ChevronRight } from 'lucide-react';
-import type { Journey, TicketType } from '../../types';
+import { useState } from 'react';
+import { Clock, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
+import type { Journey, TicketType, Disruption } from '../../types';
 import { getTransportIcon } from '../../utils/transport';
 import { formatPrice } from '../../utils/formatting';
 import MultiTicketBreakdown from './MultiTicketBreakdown';
@@ -11,9 +12,12 @@ interface JourneyCardProps {
   isFastest: boolean | null;
   isCheapest: boolean | null;
   onSelect: (j: Journey) => void;
+  disruption?: Disruption | null;
 }
 
-export default function JourneyCard({ journey: j, ticketType, isGreenest, isFastest, isCheapest, onSelect }: JourneyCardProps) {
+export default function JourneyCard({ journey: j, ticketType, isGreenest, isFastest, isCheapest, onSelect, disruption }: JourneyCardProps) {
+  const [showLegs, setShowLegs] = useState(false);
+
   const borderClass = isGreenest
     ? 'border-green-500 bg-green-50/50'
     : isFastest
@@ -89,9 +93,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
           </div>
         </div>
 
-        {/* Right: CO2 + price + button
-            On mobile: flex-row with price left, button right.
-            On sm+: flex-col aligned to the right. */}
+        {/* Right: CO2 + price + button */}
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start sm:text-right sm:ml-6 sm:shrink-0 gap-3 sm:gap-0">
           {/* Price + CO2 group */}
           <div>
@@ -114,8 +116,82 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
         </div>
       </div>
 
+      {/* Multi-ticket breakdown */}
       {j.requiresMultipleTickets && j.tickets && (
         <MultiTicketBreakdown tickets={j.tickets} />
+      )}
+
+      {/* Leg detail toggle — only shown when legs data is available */}
+      {j.legs && j.legs.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          <button
+            onClick={() => setShowLegs(v => !v)}
+            aria-expanded={showLegs}
+            aria-controls={`legs-${j.id}`}
+            className="flex items-center gap-1.5 text-sm text-brand hover:text-brand-hover font-medium transition"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform ${showLegs ? 'rotate-180' : ''}`} />
+            {showLegs ? 'Hide journey details' : 'Show journey details'}
+          </button>
+
+          {showLegs && (
+            <div id={`legs-${j.id}`} className="mt-3 space-y-0">
+              {j.legs.map((leg, i) => (
+                <div key={i} className="flex items-stretch gap-3">
+                  {/* Timeline spine */}
+                  <div className="flex flex-col items-center w-6 shrink-0">
+                    <div className="w-3 h-3 rounded-full border-2 border-brand bg-white mt-1 shrink-0" />
+                    {i < j.legs!.length - 1 && (
+                      <div className="w-px bg-gray-200 flex-1 my-1" />
+                    )}
+                  </div>
+
+                  {/* Leg info */}
+                  <div className={`flex-1 pb-3 ${i < j.legs!.length - 1 ? '' : ''}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {leg.departure} <span className="text-gray-500 font-normal">·</span> {leg.from}
+                        </p>
+                        <div className="flex items-center gap-2 my-1 text-xs text-gray-500">
+                          <span className="text-brand">{getTransportIcon(leg.mode)}</span>
+                          <span>{leg.operator}</span>
+                          <span>·</span>
+                          <span>{leg.duration}</span>
+                          {leg.stops !== undefined && leg.stops > 0 && (
+                            <><span>·</span><span>{leg.stops} stop{leg.stops !== 1 ? 's' : ''}</span></>
+                          )}
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {leg.arrival} <span className="text-gray-500 font-normal">·</span> {leg.to}
+                        </p>
+                      </div>
+                      {leg.platform && (
+                        <span className="text-xs font-semibold text-brand bg-brand-light px-2 py-1 rounded shrink-0">
+                          Plat. {leg.platform}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Disruption warning — only shown for critical/high severity affecting this journey */}
+      {disruption && (disruption.severity === 'critical' || disruption.severity === 'high') && (
+        <div
+          role="alert"
+          className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2.5 flex items-start gap-2"
+        >
+          <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-yellow-800">{disruption.title}</p>
+            <p className="text-xs text-yellow-700 mt-0.5">{disruption.description}</p>
+          </div>
+        </div>
       )}
     </div>
   );

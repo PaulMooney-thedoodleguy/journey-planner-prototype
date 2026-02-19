@@ -23,6 +23,8 @@ export default function DepartureBoardPage() {
     navigate(`/departures/${stationId}/track/${encodeURIComponent(`${dep.operator}-${dep.destination}`)}`);
   };
 
+  const platformLabel = selectedStation?.type === 'bus' ? 'Route' : 'Platform';
+
   return (
     <PageShell>
       <button onClick={() => navigate('/departures')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
@@ -30,13 +32,13 @@ export default function DepartureBoardPage() {
       </button>
 
       {selectedStation && (
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
               {getTransportIcon(selectedStation.type)}
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{selectedStation.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">{selectedStation.name}</h1>
               <p className="text-gray-600 text-sm">Live Departures</p>
             </div>
           </div>
@@ -44,14 +46,16 @@ export default function DepartureBoardPage() {
       )}
 
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-indigo-600 text-white p-4">
-          <div className="grid grid-cols-4 gap-4 text-sm font-semibold">
+        {/* Header — 3 cols on mobile, 4 on sm+ */}
+        <div className="bg-indigo-600 text-white p-3 sm:p-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 text-sm font-semibold">
             <div>Time</div>
             <div>Destination</div>
-            <div>{selectedStation?.type === 'bus' ? 'Route' : 'Platform'}</div>
+            <div className="hidden sm:block">{platformLabel}</div>
             <div>Status</div>
           </div>
         </div>
+
         <div className="divide-y">
           {isDeparturesLoading ? (
             <div className="p-8 text-center text-gray-500">Loading departures…</div>
@@ -61,20 +65,28 @@ export default function DepartureBoardPage() {
             departures.map((dep) => (
               <div
                 key={`${dep.operator}-${dep.destination}-${dep.time}`}
-                className={`p-4 transition ${dep.hasLiveTracking ? 'hover:bg-indigo-50 cursor-pointer' : 'hover:bg-gray-50'}`}
+                className={`p-3 sm:p-4 transition ${dep.hasLiveTracking ? 'hover:bg-indigo-50 cursor-pointer' : 'hover:bg-gray-50'}`}
                 onClick={() => handleTrackService(dep)}
               >
-                <div className="grid grid-cols-4 gap-4 items-center">
-                  <div className="font-bold text-lg">{dep.time}</div>
-                  <div>
-                    <p className="font-semibold">{dep.destination}</p>
-                    <p className="text-sm text-gray-500">{dep.operator}</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
+                  <div className="font-bold text-base sm:text-lg">{dep.time}</div>
+
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{dep.destination}</p>
+                    <p className="text-sm text-gray-500 truncate">{dep.operator}</p>
+                    {/* Platform shown inline on mobile only */}
+                    <p className="sm:hidden text-xs font-semibold text-indigo-600 mt-0.5">
+                      {dep.platform !== null ? `${platformLabel} ${dep.platform}` : ''}
+                    </p>
                   </div>
-                  <div className="font-semibold text-indigo-600">
-                    {dep.platform !== null ? `Platform ${dep.platform}` : dep.operator}
+
+                  {/* Platform column — desktop only */}
+                  <div className="hidden sm:block font-semibold text-indigo-600">
+                    {dep.platform !== null ? `${platformLabel} ${dep.platform}` : dep.operator}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${dep.status === 'On time' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className={`inline-block px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${dep.status === 'On time' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
                       {dep.status}
                     </span>
                     {dep.hasLiveTracking && (

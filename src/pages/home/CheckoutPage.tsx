@@ -56,7 +56,7 @@ export default function CheckoutPage() {
         ← Back to Results
       </button>
 
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-2xl">
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Passenger Details</h2>
         <div className="space-y-6">
           <div>

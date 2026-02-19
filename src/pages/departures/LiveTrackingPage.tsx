@@ -28,8 +28,8 @@ export default function LiveTrackingPage() {
         ← Back to Departures
       </button>
 
-      <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg text-green-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -54,7 +54,7 @@ export default function LiveTrackingPage() {
         direction={trackedService.direction}
         stationName={selectedStation.name}
         stationType={selectedStation.type}
-        height="500px"
+        height="min(500px, calc(100vh - 280px))"
       />
     </PageShell>
   );

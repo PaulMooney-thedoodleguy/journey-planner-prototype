@@ -16,7 +16,7 @@ export default function DeparturesPage() {
 
   return (
     <PageShell>
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
           <Clock className="w-8 h-8 text-indigo-600" />
           <h1 className="text-3xl font-bold text-gray-900">Live Departures</h1>

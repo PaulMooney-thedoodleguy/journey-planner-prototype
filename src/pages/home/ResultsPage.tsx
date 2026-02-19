@@ -30,8 +30,8 @@ export default function ResultsPage() {
         ← Back to Search
       </button>
 
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <div className="flex items-center justify-between mb-2">
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
           <h2 className="text-2xl font-bold">Available Journeys</h2>
           {journeyResults.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">

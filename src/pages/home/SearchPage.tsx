@@ -96,9 +96,9 @@ export default function SearchPage() {
 
       {/* Journey Planner Form */}
       {(!showMap || isFormAnimating) && (
-        <div className={`fixed inset-0 flex items-center justify-center z-30 pb-20 px-6 ${isFormAnimating ? 'form-exit' : 'form-enter'}`}>
+        <div className={`fixed inset-0 flex items-center justify-center z-30 pb-20 px-4 sm:px-6 ${isFormAnimating ? 'form-exit' : 'form-enter'}`}>
           <div className="w-full max-w-2xl">
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <Train className="w-8 h-8 text-indigo-600" />
                 <h1 className="text-3xl font-bold text-gray-900">Plan Your Journey</h1>

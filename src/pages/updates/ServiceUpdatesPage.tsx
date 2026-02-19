@@ -34,7 +34,7 @@ export default function ServiceUpdatesPage() {
 
   return (
     <PageShell>
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
           <AlertTriangle className="w-8 h-8 text-indigo-600" />
           <h1 className="text-3xl font-bold text-gray-900">Service Updates</h1>
@@ -69,7 +69,7 @@ export default function ServiceUpdatesPage() {
                 <div className="flex items-start gap-4">
                   <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${getSeverityBadge(d.severity)}`} />
                   <div className="flex-1">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                       <div>
                         <h3 className="font-bold text-lg mb-1">{d.title}</h3>
                         <p className="text-sm font-medium flex items-center gap-2">

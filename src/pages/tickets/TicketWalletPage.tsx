@@ -113,7 +113,7 @@ export default function TicketWalletPage() {
                     )}
                   </div>
                 );
-              } else {
+              } else if ('ticket' in item) {
                 const t = item.ticket;
                 return (
                   <div key={t.id} className="border-2 rounded-lg p-6 hover:shadow-md transition cursor-pointer border-gray-200"

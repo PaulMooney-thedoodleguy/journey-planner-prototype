@@ -3,11 +3,13 @@ import { useJourneyContext } from '../../context/JourneyContext';
 import JourneyCard from '../../components/journey/JourneyCard';
 import PageShell from '../../components/layout/PageShell';
 import { getDurationMins } from '../../utils/transport';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Journey } from '../../types';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
   const { journeyResults, searchParams, setSelectedJourney } = useJourneyContext();
+  usePageTitle('Journey Results');
 
   // Guard against empty array — Math.min() with no args returns Infinity
   const lowestCO2 = journeyResults.length > 0 ? Math.min(...journeyResults.map(j => j.co2)) : null;

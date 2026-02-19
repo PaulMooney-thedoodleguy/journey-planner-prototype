@@ -3,6 +3,7 @@ import { AlertTriangle, Info, MapPin } from 'lucide-react';
 import { getDisruptionsService } from '../../services/transport.service';
 import PageShell from '../../components/layout/PageShell';
 import { getSeverityColor, getSeverityBadge } from '../../utils/transport';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Disruption, Severity } from '../../types';
 
 const SEVERITIES: Array<'all' | Severity> = ['all', 'critical', 'high', 'medium', 'low'];
@@ -11,6 +12,7 @@ export default function ServiceUpdatesPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<'all' | Severity>('all');
+  usePageTitle('Service Updates');
 
   useEffect(() => {
     getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));

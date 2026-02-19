@@ -5,6 +5,7 @@ import { useJourneyContext } from '../../context/JourneyContext';
 import MapView from '../../components/map/MapView';
 import PageShell from '../../components/layout/PageShell';
 import { MAP_STATIONS } from '../../data/stations';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import type { JourneySearchParams, MapMarker } from '../../types';
 
 /*
@@ -29,6 +30,7 @@ const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
 export default function SearchPage() {
   const navigate = useNavigate();
   const { searchParams, submitSearch, isSearching, searchError } = useJourneyContext();
+  usePageTitle('Plan Your Journey');
 
   const [localParams, setLocalParams] = useState<JourneySearchParams>({ ...searchParams });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -97,7 +99,7 @@ export default function SearchPage() {
   };
 
   const inputClass = (field: string) =>
-    `flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
+    `flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <PageShell fullHeight>
@@ -166,12 +168,16 @@ export default function SearchPage() {
                   <div className="space-y-6">
                     {/* From */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">From</label>
+                      <label htmlFor="from-input" className="block text-sm font-medium text-gray-700 mb-2">From</label>
                       <div className="flex gap-2">
                         <input
-                          type="text" value={localParams.from}
+                          id="from-input"
+                          type="text"
+                          value={localParams.from}
                           onChange={e => updateField('from', e.target.value)}
                           placeholder="e.g. London Kings Cross"
+                          aria-describedby={formErrors.from ? 'from-error' : undefined}
+                          aria-invalid={!!formErrors.from}
                           className={inputClass('from')}
                         />
                         <button onClick={swapLocations} aria-label="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors">
@@ -180,17 +186,21 @@ export default function SearchPage() {
                           </svg>
                         </button>
                       </div>
-                      {formErrors.from && <p className="text-red-600 text-xs mt-1">{formErrors.from}</p>}
+                      {formErrors.from && <p id="from-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.from}</p>}
                     </div>
 
                     {/* To */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">To</label>
+                      <label htmlFor="to-input" className="block text-sm font-medium text-gray-700 mb-2">To</label>
                       <div className="flex gap-2">
                         <input
-                          type="text" value={localParams.to}
+                          id="to-input"
+                          type="text"
+                          value={localParams.to}
                           onChange={e => updateField('to', e.target.value)}
                           placeholder="e.g. Manchester Piccadilly"
+                          aria-describedby={formErrors.to ? 'to-error' : undefined}
+                          aria-invalid={!!formErrors.to}
                           className={inputClass('to')}
                         />
                         {/* Route through handleToggle to play the exit animation before showing map */}
@@ -198,31 +208,44 @@ export default function SearchPage() {
                           <MapPin className="w-5 h-5" /><span className="text-sm font-medium">Map</span>
                         </button>
                       </div>
-                      {formErrors.to && <p className="text-red-600 text-xs mt-1">{formErrors.to}</p>}
+                      {formErrors.to && <p id="to-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.to}</p>}
                     </div>
 
                     {/* Date & Time */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Date & Time</label>
+                      <label htmlFor="date-input" className="block text-sm font-medium text-gray-700 mb-2">Date & Time</label>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <input type="date" value={localParams.date}
+                          <input
+                            id="date-input"
+                            type="date"
+                            value={localParams.date}
                             onChange={e => updateField('date', e.target.value)}
-                            className={inputClass('date').replace('flex-1 ', '')} />
-                          {formErrors.date && <p className="text-red-600 text-xs mt-1">{formErrors.date}</p>}
+                            aria-describedby={formErrors.date ? 'date-error' : undefined}
+                            aria-invalid={!!formErrors.date}
+                            className={`${inputClass('date').replace('flex-1 ', '')} focus:outline-none`}
+                          />
+                          {formErrors.date && <p id="date-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.date}</p>}
                         </div>
                         <div>
-                          <input type="time" value={localParams.time}
+                          <label htmlFor="time-input" className="sr-only">Time</label>
+                          <input
+                            id="time-input"
+                            type="time"
+                            value={localParams.time}
                             onChange={e => updateField('time', e.target.value)}
-                            className={inputClass('time').replace('flex-1 ', '')} />
-                          {formErrors.time && <p className="text-red-600 text-xs mt-1">{formErrors.time}</p>}
+                            aria-describedby={formErrors.time ? 'time-error' : undefined}
+                            aria-invalid={!!formErrors.time}
+                            className={`${inputClass('time').replace('flex-1 ', '')} focus:outline-none`}
+                          />
+                          {formErrors.time && <p id="time-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.time}</p>}
                         </div>
                       </div>
                     </div>
 
-                    {/* Ticket Type */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Ticket Type</label>
+                    {/* Ticket Type — fieldset/legend for screen reader group context (WCAG 1.3.1) */}
+                    <fieldset className="border-0 p-0 m-0">
+                      <legend className="block text-sm font-medium text-gray-700 mb-2">Ticket Type</legend>
                       <div className="flex gap-4">
                         {(['single', 'return'] as const).map(type => (
                           <label key={type} className="flex items-center cursor-pointer capitalize">
@@ -234,10 +257,10 @@ export default function SearchPage() {
                           </label>
                         ))}
                       </div>
-                    </div>
+                    </fieldset>
 
                     {searchError && (
-                      <p className="text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                      <p role="alert" className="text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                         {searchError}
                       </p>
                     )}

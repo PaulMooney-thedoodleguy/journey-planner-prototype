@@ -29,7 +29,7 @@ export default function BottomNav() {
               onClick={() => navigate(tab.path)}
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative ${active ? 'text-brand' : 'text-gray-600'}`}
+              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? 'text-brand' : 'text-gray-600'}`}
             >
               <Icon className="w-6 h-6 mb-1" />
               <span className="text-xs font-medium">{tab.label}</span>

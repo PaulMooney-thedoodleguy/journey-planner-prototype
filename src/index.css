@@ -7,6 +7,18 @@ body {
   color: #222428;
 }
 
+/* WCAG 2.4.7 / 2.4.11 — Visible focus ring for keyboard navigation.
+   Inputs suppress this in favour of the Tailwind ring (box-shadow). */
+*:focus-visible {
+  outline: 3px solid #1a65eb;
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 /* Ensure Leaflet map fills its container */
 .leaflet-container {
   width: 100%;

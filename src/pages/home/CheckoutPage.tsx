@@ -4,12 +4,14 @@ import { CreditCard } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import PageShell from '../../components/layout/PageShell';
 import { formatPrice } from '../../utils/formatting';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { selectedJourney, searchParams, passengerDetails, setPassengerDetails, completePayment } = useJourneyContext();
   const [cardNumber, setCardNumber] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  usePageTitle('Passenger Details');
 
   useEffect(() => {
     if (!selectedJourney) navigate('/');
@@ -27,7 +29,8 @@ export default function CheckoutPage() {
     if (errors.cardNumber) setErrors(prev => { const n = { ...prev }; delete n.cardNumber; return n; });
   };
 
-  const handlePayment = () => {
+  const handlePayment = (e?: React.FormEvent) => {
+    e?.preventDefault();
     const newErrors: Record<string, string> = {};
     if (!passengerDetails.name.trim()) newErrors.name = 'Please enter your full name';
     if (!passengerDetails.email.trim()) {
@@ -48,7 +51,7 @@ export default function CheckoutPage() {
   };
 
   const fieldClass = (field: string) =>
-    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
+    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <PageShell>
@@ -58,34 +61,63 @@ export default function CheckoutPage() {
 
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 max-w-2xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Passenger Details</h2>
-        <div className="space-y-6">
+        {/* form element enables Enter-to-submit and correct screen reader semantics (WCAG 4.1.2) */}
+        <form onSubmit={handlePayment} noValidate className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-            <input type="text" value={passengerDetails.name}
+            <label htmlFor="name-input" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <input
+              id="name-input"
+              type="text"
+              value={passengerDetails.name}
               onChange={e => updatePassenger('name', e.target.value)}
-              placeholder="John Smith" className={fieldClass('name')} />
-            {errors.name && <p className="text-red-600 text-xs mt-1">{errors.name}</p>}
+              placeholder="John Smith"
+              autoComplete="name"
+              aria-describedby={errors.name ? 'name-error' : undefined}
+              aria-invalid={!!errors.name}
+              className={fieldClass('name')}
+            />
+            {errors.name && <p id="name-error" role="alert" className="text-red-600 text-xs mt-1">{errors.name}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input type="email" value={passengerDetails.email}
+            <label htmlFor="email-input" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input
+              id="email-input"
+              type="email"
+              value={passengerDetails.email}
               onChange={e => updatePassenger('email', e.target.value)}
-              placeholder="john.smith@example.com" className={fieldClass('email')} />
-            {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email}</p>}
+              placeholder="john.smith@example.com"
+              autoComplete="email"
+              aria-describedby={errors.email ? 'email-error' : undefined}
+              aria-invalid={!!errors.email}
+              className={fieldClass('email')}
+            />
+            {errors.email && <p id="email-error" role="alert" className="text-red-600 text-xs mt-1">{errors.email}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-            <input type="text" value={cardNumber}
+            <label htmlFor="card-input" className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
+            <input
+              id="card-input"
+              type="text"
+              value={cardNumber}
               onChange={e => updateCard(e.target.value)}
-              placeholder="1234 5678 9012 3456" maxLength={19} className={fieldClass('cardNumber')} />
-            {errors.cardNumber && <p className="text-red-600 text-xs mt-1">{errors.cardNumber}</p>}
+              placeholder="1234 5678 9012 3456"
+              maxLength={19}
+              autoComplete="cc-number"
+              inputMode="numeric"
+              aria-describedby={errors.cardNumber ? 'card-error' : undefined}
+              aria-invalid={!!errors.cardNumber}
+              className={fieldClass('cardNumber')}
+            />
+            {errors.cardNumber && <p id="card-error" role="alert" className="text-red-600 text-xs mt-1">{errors.cardNumber}</p>}
           </div>
-          <button onClick={handlePayment}
-            className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2">
+          <button
+            type="submit"
+            className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2"
+          >
             <CreditCard className="w-5 h-5" />
             Pay {formatPrice(selectedJourney.price[searchParams.ticketType])}
           </button>
-        </div>
+        </form>
       </div>
     </PageShell>
   );

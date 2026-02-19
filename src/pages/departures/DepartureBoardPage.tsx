@@ -3,11 +3,13 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDeparturesContext } from '../../context/DeparturesContext';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon } from '../../utils/transport';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function DepartureBoardPage() {
   const { stationId } = useParams();
   const navigate = useNavigate();
   const { nearbyStations, selectedStation, setSelectedStation, departures, isDeparturesLoading, setTrackedService } = useDeparturesContext();
+  usePageTitle(selectedStation ? `${selectedStation.name} Departures` : 'Departures');
 
   // Handle direct URL navigation — runs when stationId or station list changes
   useEffect(() => {

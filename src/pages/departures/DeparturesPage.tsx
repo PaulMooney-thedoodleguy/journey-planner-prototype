@@ -4,10 +4,12 @@ import { useDeparturesContext } from '../../context/DeparturesContext';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon } from '../../utils/transport';
 import { MOCK_DEPARTURES } from '../../data/departures';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function DeparturesPage() {
   const navigate = useNavigate();
   const { nearbyStations, setSelectedStation } = useDeparturesContext();
+  usePageTitle('Live Departures');
 
   const handleStationClick = async (station: typeof nearbyStations[0]) => {
     await setSelectedStation(station);

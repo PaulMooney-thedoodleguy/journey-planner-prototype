@@ -2,10 +2,12 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import PageShell from '../../components/layout/PageShell';
+import { usePageTitle } from '../../hooks/usePageTitle';
 
 export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { passengerDetails, resetJourney } = useJourneyContext();
+  usePageTitle('Booking Confirmed');
 
   const handleBookAnother = () => {
     resetJourney();

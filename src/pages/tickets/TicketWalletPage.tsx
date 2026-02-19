@@ -5,12 +5,14 @@ import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon } from '../../utils/transport';
 import { formatDate } from '../../utils/formatting';
+import { usePageTitle } from '../../hooks/usePageTitle';
 import type { PurchasedTicket } from '../../types';
 
 export default function TicketWalletPage() {
   const navigate = useNavigate();
   const { purchasedTickets } = useAppContext();
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+  usePageTitle('My Tickets');
 
   // Group multi-modal tickets together — memoised so it only reruns when tickets change
   const grouped = useMemo(() => {

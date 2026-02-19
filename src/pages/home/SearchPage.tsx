@@ -17,12 +17,12 @@ const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
 
 export default function SearchPage() {
   const navigate = useNavigate();
-  const { searchParams, setSearchParams, submitSearch, isSearching, searchError } = useJourneyContext();
+  const { searchParams, submitSearch, isSearching, searchError } = useJourneyContext();
 
   const [localParams, setLocalParams] = useState<JourneySearchParams>({ ...searchParams });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showMap, setShowMap] = useState(false);
-  const [isFormAnimating, setIsFormAnimating] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
   const updateField = (field: keyof JourneySearchParams, value: string) => {
     setLocalParams(prev => ({ ...prev, [field]: value }));
@@ -33,12 +33,18 @@ export default function SearchPage() {
     setLocalParams(prev => ({ ...prev, from: prev.to, to: prev.from }));
   };
 
-  const handleToggleMap = () => {
-    if (!showMap) {
-      setIsFormAnimating(true);
-      setTimeout(() => { setShowMap(true); setIsFormAnimating(false); }, 300);
+  const handleToggle = () => {
+    if (showMap) {
+      setShowMap(false);        // map → form: enter animation plays automatically
     } else {
-      setShowMap(false);
+      setIsExiting(true);       // form → map: start exit animation
+    }
+  };
+
+  const handleFormAnimEnd = () => {
+    if (isExiting) {
+      setShowMap(true);         // remove form from DOM after exit animation
+      setIsExiting(false);
     }
   };
 
@@ -69,34 +75,51 @@ export default function SearchPage() {
   return (
     <PageShell fullHeight>
       <style>{`
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: scale(1); } }
-        @keyframes scaleOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0); } }
-        .form-enter { animation: scaleIn 0.3s ease-out forwards; }
-        .form-exit { animation: scaleOut 0.3s ease-in forwards; }
+        @keyframes formIn {
+          from { opacity: 0; transform: scale(0); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes formOut {
+          from { opacity: 1; transform: scale(1); }
+          to   { opacity: 0; transform: scale(0); }
+        }
+        .form-enter {
+          animation: formIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          transform-origin: bottom left;
+        }
+        .form-exit {
+          animation: formOut 0.25s ease-in forwards;
+          transform-origin: bottom left;
+        }
       `}</style>
 
-      {/* Map background */}
-      <div className="absolute inset-0 pb-20 overflow-hidden">
+      {/* Map — always rendered in background */}
+      <div className="absolute inset-0 pb-20">
         <MapView
           markers={mapMarkers}
           onMarkerClick={handleMapStationSelect}
           height="100%"
         />
-        <div className="absolute bottom-24 left-4 z-50">
-          <button
-            onClick={handleToggleMap}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold hover:bg-indigo-700 transition cursor-pointer flex items-center gap-2"
-          >
-            {showMap || isFormAnimating
-              ? <><Search className="w-5 h-5" />Show Form</>
-              : <><MapPin className="w-5 h-5" />View Map</>}
-          </button>
-        </div>
       </div>
 
-      {/* Journey Planner Form */}
-      {(!showMap || isFormAnimating) && (
-        <div className={`fixed inset-0 flex items-center justify-center z-30 pb-20 px-4 sm:px-6 ${isFormAnimating ? 'form-exit' : 'form-enter'}`}>
+      {/* Toggle button — bottom-left, above everything including Leaflet controls */}
+      <div className="absolute bottom-24 left-4 z-[2000]">
+        <button
+          onClick={handleToggle}
+          className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold hover:bg-indigo-700 transition flex items-center gap-2"
+        >
+          {showMap || isExiting
+            ? <><Search className="w-5 h-5" />Show Form</>
+            : <><MapPin className="w-5 h-5" />View Map</>}
+        </button>
+      </div>
+
+      {/* Form overlay — z-[1500] keeps it above Leaflet (z-1000) but below the toggle button */}
+      {!showMap && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center pb-20 px-4 sm:px-6 z-[1500] ${isExiting ? 'form-exit' : 'form-enter'}`}
+          onAnimationEnd={handleFormAnimEnd}
+        >
           <div className="w-full max-w-2xl">
             <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -134,7 +157,7 @@ export default function SearchPage() {
                       placeholder="e.g. Manchester Piccadilly"
                       className={inputClass('to')}
                     />
-                    <button onClick={handleToggleMap} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition flex items-center gap-2">
+                    <button onClick={() => setShowMap(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition flex items-center gap-2">
                       <MapPin className="w-5 h-5" /><span className="text-sm font-medium">Map</span>
                     </button>
                   </div>

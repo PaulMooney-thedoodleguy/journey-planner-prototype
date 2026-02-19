@@ -1,6 +1,7 @@
 export type TransportMode = 'train' | 'bus' | 'tube' | 'multimodal';
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
 export type TicketType = 'single' | 'return';
+export type PassengerType = 'adult' | 'child' | 'railcard';
 
 // ─── Journey ─────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ export interface Journey {
   operator: string;
   price: Record<TicketType, number>;
   co2: number;
+  carCo2?: number;
   legs?: JourneyLeg[];
   requiresMultipleTickets?: boolean;
   tickets?: OperatorTicket[];
@@ -48,6 +50,7 @@ export interface JourneySearchParams {
   date: string;
   time: string;
   ticketType: TicketType;
+  passengerType: PassengerType;
 }
 
 // ─── Tickets ─────────────────────────────────────────────────

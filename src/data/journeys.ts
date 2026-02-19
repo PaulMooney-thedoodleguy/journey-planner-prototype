@@ -13,6 +13,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     operator: 'LNER',
     price: { single: 65.50, return: 98.00 },
     co2: 8.2,
+    carCo2: 58,
     legs: [
       { mode: 'train', operator: 'LNER', from: 'London Kings Cross', to: 'Manchester Piccadilly', departure: '09:00', arrival: '11:15', duration: '2h 15m', platform: '5', stops: 2 },
     ],
@@ -29,6 +30,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     operator: 'Avanti West Coast',
     price: { single: 52.00, return: 82.00 },
     co2: 9.1,
+    carCo2: 58,
     legs: [
       { mode: 'train', operator: 'Avanti West Coast', from: 'London Kings Cross', to: 'Birmingham New Street', departure: '10:30', arrival: '12:00', duration: '1h 30m', platform: '11', stops: 1 },
       { mode: 'train', operator: 'Avanti West Coast', from: 'Birmingham New Street', to: 'Manchester Piccadilly', departure: '12:15', arrival: '13:05', duration: '50m', platform: '3', stops: 0 },
@@ -46,6 +48,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     operator: 'National Express',
     price: { single: 25.50, return: 42.00 },
     co2: 18.5,
+    carCo2: 58,
     legs: [
       { mode: 'bus', operator: 'National Express', from: 'London Victoria Coach Station', to: 'Manchester Coach Station', departure: '08:00', arrival: '13:30', duration: '5h 30m', stops: 3 },
     ],
@@ -62,6 +65,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     operator: 'Multiple',
     price: { single: 38.50, return: 65.00 },
     co2: 7.8,
+    carCo2: 58,
     legs: [
       { mode: 'tube', operator: 'TfL', from: 'Kings Cross St. Pancras', to: 'Euston', departure: '09:15', arrival: '09:20', duration: '5m', stops: 1 },
       { mode: 'train', operator: 'Avanti West Coast', from: 'London Euston', to: 'Crewe', departure: '09:35', arrival: '11:25', duration: '1h 50m', platform: '7', stops: 2 },
@@ -80,6 +84,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     operator: 'Multiple',
     price: { single: 32.00, return: 55.00 },
     co2: 10.3,
+    carCo2: 58,
     requiresMultipleTickets: true,
     legs: [
       { mode: 'bus', operator: 'Arriva', from: 'Kings Cross', to: 'Liverpool Street', departure: '10:00', arrival: '10:30', duration: '30m', stops: 4 },

@@ -31,6 +31,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().slice(0, 5),
     ticketType: 'single',
+    passengerType: 'adult',
   });
   const [journeyResults, setJourneyResults] = useState<Journey[]>([]);
   const [isSearching, setIsSearching] = useState(false);

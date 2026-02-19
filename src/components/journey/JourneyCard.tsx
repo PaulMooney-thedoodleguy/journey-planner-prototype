@@ -97,12 +97,17 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
         <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start sm:text-right sm:ml-6 sm:shrink-0 gap-3 sm:gap-0">
           {/* Price + CO2 group */}
           <div>
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-1 sm:mb-2 ${j.co2 <= 8 ? 'bg-green-100 text-green-800' : j.co2 <= 12 ? 'bg-yellow-100 text-yellow-800' : 'bg-orange-100 text-orange-800'}`}>
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-1 ${j.co2 <= 8 ? 'bg-green-100 text-green-800' : j.co2 <= 12 ? 'bg-yellow-100 text-yellow-800' : 'bg-orange-100 text-orange-800'}`}>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-xs font-semibold">{j.co2} kg CO₂</span>
             </div>
+            {j.carCo2 && j.carCo2 > j.co2 && (
+              <p className="text-xs text-green-700 font-medium mb-1 sm:mb-2">
+                {Math.round((1 - j.co2 / j.carCo2) * 100)}% less than driving
+              </p>
+            )}
             <p className="text-xs text-gray-500 mb-0.5 sm:mb-1">{ticketType === 'single' ? 'Single' : 'Return'}</p>
             <p className="text-2xl sm:text-3xl font-bold text-brand">{formatPrice(j.price[ticketType])}</p>
           </div>

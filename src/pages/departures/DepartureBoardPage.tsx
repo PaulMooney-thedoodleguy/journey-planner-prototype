@@ -85,10 +85,10 @@ export default function DepartureBoardPage() {
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{dep.destination}</p>
                     <p className="text-sm text-gray-500 truncate">{dep.operator}</p>
-                    {/* Platform shown inline on mobile only */}
-                    <p className="sm:hidden text-xs font-semibold text-brand mt-0.5">
-                      {dep.platform !== null ? `${platformLabel} ${dep.platform}` : ''}
-                    </p>
+                    {/* Platform badge — always visible on mobile as a chip (FE-19) */}
+                    <span className="sm:hidden inline-block mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
+                      {dep.platform !== null ? `${platformLabel} ${dep.platform}` : 'TBA'}
+                    </span>
                   </div>
 
                   {/* Platform column — desktop only */}

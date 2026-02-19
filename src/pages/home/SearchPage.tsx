@@ -7,7 +7,8 @@ import PageShell from '../../components/layout/PageShell';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { JourneySearchParams, MapMarker } from '../../types';
+import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../../utils/recentSearches';
+import type { JourneySearchParams, MapMarker, PassengerType } from '../../types';
 
 /*
  * Z-index stacking order on this page:
@@ -28,6 +29,12 @@ const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
   label: s.name,
 }));
 
+const PASSENGER_LABELS: Record<PassengerType, string> = {
+  adult:    'Adult',
+  child:    'Child (50% off)',
+  railcard: 'Railcard (1/3 off)',
+};
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const { searchParams, submitSearch, isSearching, searchError } = useJourneyContext();
@@ -37,6 +44,7 @@ export default function SearchPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showMap, setShowMap] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(() => getRecentSearches());
 
   // Ref for programmatic focus on GDS error summary (WCAG 3.3.1)
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -59,6 +67,31 @@ export default function SearchPage() {
 
   const swapLocations = () => {
     setLocalParams(prev => ({ ...prev, from: prev.to, to: prev.from }));
+  };
+
+  // Sets date and time to the current moment, rounded up to the next 5-minute boundary.
+  // Uses local time components (not toISOString) to avoid UTC day-shift for UK users.
+  const setNow = () => {
+    const now = new Date();
+    const rounded = new Date(Math.ceil(now.getTime() / (5 * 60_000)) * (5 * 60_000));
+    const y  = rounded.getFullYear();
+    const mo = String(rounded.getMonth() + 1).padStart(2, '0');
+    const d  = String(rounded.getDate()).padStart(2, '0');
+    const h  = String(rounded.getHours()).padStart(2, '0');
+    const mi = String(rounded.getMinutes()).padStart(2, '0');
+    updateField('date', `${y}-${mo}-${d}`);
+    updateField('time', `${h}:${mi}`);
+  };
+
+  const applyRecentSearch = (from: string, to: string) => {
+    setLocalParams(prev => ({ ...prev, from, to }));
+    // Clear any existing location errors
+    setFormErrors(prev => { const n = { ...prev }; delete n.from; delete n.to; return n; });
+  };
+
+  const dismissRecentSearch = (index: number) => {
+    removeRecentSearch(index);
+    setRecentSearches(getRecentSearches());
   };
 
   const handleToggle = () => {
@@ -103,7 +136,11 @@ export default function SearchPage() {
     }
 
     const ok = await submitSearch(localParams);
-    if (ok) navigate('/results');
+    if (ok) {
+      addRecentSearch(localParams.from, localParams.to);
+      setRecentSearches(getRecentSearches());
+      navigate('/results');
+    }
   };
 
   // w-full is correct for autocomplete inputs (the StationAutocomplete wrapper handles flex-1);
@@ -240,9 +277,49 @@ export default function SearchPage() {
                       {formErrors.to && <p id="to-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.to}</p>}
                     </div>
 
-                    {/* Date & Time */}
+                    {/* Recent searches — shown below the To field when history exists */}
+                    {recentSearches.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 mb-2">Recent</p>
+                        <div className="flex flex-wrap gap-2">
+                          {recentSearches.map((s, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center bg-gray-100 rounded-lg text-xs text-gray-700 pl-3 pr-1 py-1.5"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => applyRecentSearch(s.from, s.to)}
+                                className="hover:text-brand transition mr-1"
+                              >
+                                {s.from} → {s.to}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => dismissRecentSearch(i)}
+                                aria-label={`Remove recent search: ${s.from} to ${s.to}`}
+                                className="text-gray-400 hover:text-red-500 transition p-0.5 rounded leading-none"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date & Time — "Use current time" shortcut resets to now rounded to next 5 mins */}
                     <div>
-                      <label htmlFor="date-input" className="block text-sm font-medium text-gray-700 mb-2">Date & Time</label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label htmlFor="date-input" className="text-sm font-medium text-gray-700">Date & Time</label>
+                        <button
+                          type="button"
+                          onClick={setNow}
+                          className="text-xs text-brand hover:text-brand-hover font-medium transition"
+                        >
+                          Use current time
+                        </button>
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <input
@@ -283,6 +360,22 @@ export default function SearchPage() {
                               onChange={() => updateField('ticketType', type)}
                               className="mr-2" />
                             {type}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+
+                    {/* Passenger Type — fieldset/legend for screen reader group context (WCAG 1.3.1) */}
+                    <fieldset className="border-0 p-0 m-0">
+                      <legend className="block text-sm font-medium text-gray-700 mb-2">Passenger Type</legend>
+                      <div className="flex flex-wrap gap-4">
+                        {(Object.keys(PASSENGER_LABELS) as PassengerType[]).map(type => (
+                          <label key={type} className="flex items-center cursor-pointer">
+                            <input type="radio" value={type}
+                              checked={localParams.passengerType === type}
+                              onChange={() => updateField('passengerType', type)}
+                              className="mr-2" />
+                            <span className="text-sm">{PASSENGER_LABELS[type]}</span>
                           </label>
                         ))}
                       </div>

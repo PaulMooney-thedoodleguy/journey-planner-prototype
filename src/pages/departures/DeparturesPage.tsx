@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Clock, MapPin, ChevronRight } from 'lucide-react';
+import { Clock, MapPin, ChevronRight, Search } from 'lucide-react';
 import { useDeparturesContext } from '../../context/DeparturesContext';
 import MapView from '../../components/map/MapView';
 import LiveTrackingMap from '../../components/departures/LiveTrackingMap';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon } from '../../utils/transport';
 import { MOCK_DEPARTURES, getServiceRoute } from '../../data/departures';
+import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { MapMarker, Station, Departure } from '../../types';
 
@@ -51,6 +52,58 @@ export default function DeparturesPage() {
 
   // Track whether we've already hydrated from the URL on first mount.
   const hydratedRef = useRef(false);
+
+  // ── Station search state ─────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchHighlightedIndex, setSearchHighlightedIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchListboxRef = useRef<HTMLUListElement>(null);
+
+  const searchResults =
+    searchQuery.length >= 2
+      ? MAP_STATIONS.filter(s =>
+          s.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ).slice(0, 8)
+      : [];
+  const isSearchDropdownVisible = isSearchOpen && searchResults.length > 0;
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setIsSearchOpen(true);
+    setSearchHighlightedIndex(-1);
+  };
+
+  const handleSearchSelect = (station: typeof MAP_STATIONS[number]) => {
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    setSearchHighlightedIndex(-1);
+    handleSelectStation(station);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!isSearchDropdownVisible) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSearchHighlightedIndex(i => Math.min(i + 1, searchResults.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSearchHighlightedIndex(i => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter' && searchHighlightedIndex >= 0) {
+      e.preventDefault();
+      handleSearchSelect(searchResults[searchHighlightedIndex]);
+    } else if (e.key === 'Escape') {
+      setIsSearchOpen(false);
+      setSearchHighlightedIndex(-1);
+    }
+  };
+
+  const handleSearchBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (!searchListboxRef.current?.contains(e.relatedTarget as Node)) {
+      setIsSearchOpen(false);
+      setSearchHighlightedIndex(-1);
+    }
+  };
 
   // Dynamic page title reflects the active view.
   const pageTitle =
@@ -149,6 +202,9 @@ export default function DeparturesPage() {
   // ── Back to stations ─────────────────────────────────────────────────────────
 
   const handleBackToStations = () => {
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    setSearchHighlightedIndex(-1);
     setView('stations');
     setSelectedStation(null);
     navigate('/departures');
@@ -323,6 +379,78 @@ export default function DeparturesPage() {
                   <div className="px-4 pt-4 pb-3 border-b border-gray-100">
                     {/* Drag handle — visual affordance */}
                     <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" aria-hidden="true" />
+
+                    {/* Station search — ARIA 1.2 combobox pattern */}
+                    <div className="relative mb-3">
+                      <div
+                        role="combobox"
+                        aria-expanded={isSearchDropdownVisible}
+                        aria-haspopup="listbox"
+                        aria-owns="station-search-listbox"
+                      >
+                        <div className="relative">
+                          <Search
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                            aria-hidden="true"
+                          />
+                          <input
+                            ref={searchInputRef}
+                            id="station-search"
+                            type="text"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            onFocus={() => searchQuery.length >= 2 && setIsSearchOpen(true)}
+                            onBlur={handleSearchBlur}
+                            onKeyDown={handleSearchKeyDown}
+                            placeholder="Search stations…"
+                            autoComplete="off"
+                            aria-autocomplete="list"
+                            aria-controls="station-search-listbox"
+                            aria-activedescendant={
+                              searchHighlightedIndex >= 0
+                                ? `station-search-option-${searchHighlightedIndex}`
+                                : undefined
+                            }
+                            className="pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none w-full text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {isSearchDropdownVisible && (
+                        <ul
+                          ref={searchListboxRef}
+                          id="station-search-listbox"
+                          role="listbox"
+                          aria-label="Station suggestions"
+                          className="absolute z-[2100] left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-56 overflow-y-auto"
+                        >
+                          {searchResults.map((station, i) => {
+                            const isHighlighted = i === searchHighlightedIndex;
+                            return (
+                              <li
+                                key={station.id}
+                                id={`station-search-option-${i}`}
+                                role="option"
+                                aria-selected={isHighlighted}
+                                onMouseDown={() => handleSearchSelect(station)}
+                                className={`px-4 py-3 cursor-pointer flex items-center gap-3 ${
+                                  isHighlighted ? 'bg-brand text-white' : 'hover:bg-brand-light'
+                                }`}
+                              >
+                                <span className={isHighlighted ? 'text-white' : 'text-brand'}>
+                                  {getTransportIcon(station.type)}
+                                </span>
+                                <span className="text-sm flex-1">{station.name}</span>
+                                <span className={`text-xs capitalize ${isHighlighted ? 'text-white/70' : 'text-gray-400'}`}>
+                                  {station.type}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
                     <div className="flex items-center gap-3">
                       <Clock className="w-6 h-6 text-brand shrink-0" aria-hidden="true" />
                       <h1 className="text-xl font-bold text-gray-900">Live Departures</h1>

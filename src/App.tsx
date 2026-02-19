@@ -12,8 +12,6 @@ import ConfirmationPage from './pages/home/ConfirmationPage';
 import TicketWalletPage from './pages/tickets/TicketWalletPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import DeparturesPage from './pages/departures/DeparturesPage';
-import DepartureBoardPage from './pages/departures/DepartureBoardPage';
-import LiveTrackingPage from './pages/departures/LiveTrackingPage';
 import ServiceUpdatesPage from './pages/updates/ServiceUpdatesPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -31,8 +29,8 @@ export default function App() {
               <Route path="/tickets" element={<TicketWalletPage />} />
               <Route path="/tickets/:ticketId" element={<TicketDetailPage />} />
               <Route path="/departures" element={<DeparturesPage />} />
-              <Route path="/departures/:stationId" element={<DepartureBoardPage />} />
-              <Route path="/departures/:stationId/track/:serviceKey" element={<LiveTrackingPage />} />
+              <Route path="/departures/:stationId" element={<DeparturesPage />} />
+              <Route path="/departures/:stationId/track/:serviceKey" element={<DeparturesPage />} />
               <Route path="/updates" element={<ServiceUpdatesPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

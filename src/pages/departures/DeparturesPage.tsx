@@ -1,69 +1,535 @@
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Clock, MapPin, ChevronRight } from 'lucide-react';
 import { useDeparturesContext } from '../../context/DeparturesContext';
+import MapView from '../../components/map/MapView';
+import LiveTrackingMap from '../../components/departures/LiveTrackingMap';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon } from '../../utils/transport';
-import { MOCK_DEPARTURES } from '../../data/departures';
+import { MOCK_DEPARTURES, getServiceRoute } from '../../data/departures';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import type { MapMarker, Station, Departure } from '../../types';
+
+/*
+ * Z-index stacking order:
+ *   map (z-auto)
+ *   → BottomNav (z-50, fixed)
+ *   → Leaflet controls (~z-1000)
+ *   → panel wrapper (z-[1500], pointer-events-none)
+ *   → toggle/back buttons (z-[2000])
+ *
+ * The panel wrapper must stay pointer-events-none so BottomNav remains
+ * clickable. Every interactive element inside the panel opts back in with
+ * pointer-events-auto.
+ */
+
+type DepartureView = 'stations' | 'board' | 'tracking';
 
 export default function DeparturesPage() {
+  const { stationId, serviceKey } = useParams<{ stationId?: string; serviceKey?: string }>();
   const navigate = useNavigate();
-  const { nearbyStations, setSelectedStation } = useDeparturesContext();
-  usePageTitle('Live Departures');
 
-  const handleStationClick = async (station: typeof nearbyStations[0]) => {
+  const {
+    nearbyStations,
+    selectedStation,
+    setSelectedStation,
+    departures,
+    isDeparturesLoading,
+    trackedService,
+    setTrackedService,
+  } = useDeparturesContext();
+
+  // Derive the initial view from the URL so back-button and deep links work.
+  const initialView: DepartureView =
+    serviceKey ? 'tracking' : stationId ? 'board' : 'stations';
+
+  const [view, setView] = useState<DepartureView>(initialView);
+
+  // Panel animation state — mirrors the formIn/formOut pattern from SearchPage.
+  const [isPanelExiting, setIsPanelExiting] = useState(false);
+  const [isPanelVisible, setIsPanelVisible] = useState(view !== 'tracking');
+
+  // Track whether we've already hydrated from the URL on first mount.
+  const hydratedRef = useRef(false);
+
+  // Dynamic page title reflects the active view.
+  const pageTitle =
+    view === 'tracking' && trackedService
+      ? `Live: ${trackedService.operator} to ${trackedService.destination}`
+      : view === 'board' && selectedStation
+      ? `${selectedStation.name} Departures`
+      : 'Live Departures';
+  usePageTitle(pageTitle);
+
+  // ── URL hydration ────────────────────────────────────────────────────────────
+  // Runs once nearbyStations is populated and when URL params change.
+  // Avoids re-hydrating on every context update after the first mount.
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (!stationId || nearbyStations.length === 0) return;
+
+    const station = nearbyStations.find(s => s.id === Number(stationId));
+    if (!station) return;
+
+    hydratedRef.current = true;
+
+    // Hydrate board view — setSelectedStation fetches departures for us.
+    if (!selectedStation || selectedStation.id !== station.id) {
+      setSelectedStation(station);
+    }
+
+    if (serviceKey) {
+      // Hydrate tracking view — look for a matching departure in mock data.
+      const stationDeps = MOCK_DEPARTURES[station.id] ?? [];
+      const dep = stationDeps.find(
+        d => encodeURIComponent(`${d.operator}-${d.destination}`) === serviceKey
+      );
+      if (dep) {
+        setTrackedService(dep);
+        setView('tracking');
+        setIsPanelVisible(false);
+      } else {
+        setView('board');
+        setIsPanelVisible(true);
+      }
+    } else {
+      setView('board');
+      setIsPanelVisible(true);
+    }
+  }, [stationId, serviceKey, nearbyStations]);
+  // Intentionally omitting selectedStation/setSelectedStation/setTrackedService
+  // from deps — they are stable refs and including them causes re-hydration loops.
+
+  // ── Transition helpers ───────────────────────────────────────────────────────
+  // Uses a pending-action ref so the exit animation can fire before the state
+  // change that would unmount the panel. A 300 ms fallback fires if
+  // animationend never triggers (prefers-reduced-motion, background tab).
+
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  const triggerPanelExit = (action: () => void) => {
+    pendingActionRef.current = action;
+    setIsPanelExiting(true);
+    // Fallback timer.
+    setTimeout(() => {
+      if (pendingActionRef.current) {
+        setIsPanelVisible(false);
+        setIsPanelExiting(false);
+        pendingActionRef.current();
+        pendingActionRef.current = null;
+      }
+    }, 300);
+  };
+
+  const onPanelAnimEnd = () => {
+    if (isPanelExiting && pendingActionRef.current) {
+      setIsPanelVisible(false);
+      setIsPanelExiting(false);
+      pendingActionRef.current();
+      pendingActionRef.current = null;
+    }
+  };
+
+  // ── Station selection ────────────────────────────────────────────────────────
+
+  const handleSelectStation = async (station: Station) => {
     await setSelectedStation(station);
+    setView('board');
+    if (!isPanelVisible) {
+      setIsPanelVisible(true);
+    }
     navigate(`/departures/${station.id}`);
   };
 
+  const handleMarkerClick = (id: string | number) => {
+    const station = nearbyStations.find(s => s.id === id);
+    if (station) handleSelectStation(station);
+  };
+
+  // ── Back to stations ─────────────────────────────────────────────────────────
+
+  const handleBackToStations = () => {
+    setView('stations');
+    setSelectedStation(null);
+    navigate('/departures');
+  };
+
+  // ── Service tracking ─────────────────────────────────────────────────────────
+
+  const handleTrackService = (dep: Departure) => {
+    if (!dep.hasLiveTracking || !selectedStation) return;
+    setTrackedService(dep);
+    const key = encodeURIComponent(`${dep.operator}-${dep.destination}`);
+    triggerPanelExit(() => {
+      setView('tracking');
+      navigate(`/departures/${selectedStation.id}/track/${key}`);
+    });
+  };
+
+  const handleBackToBoard = () => {
+    setTrackedService(null);
+    setView('board');
+    setIsPanelVisible(true);
+    if (selectedStation) {
+      navigate(`/departures/${selectedStation.id}`);
+    } else {
+      navigate('/departures');
+    }
+  };
+
+  // ── Map markers ──────────────────────────────────────────────────────────────
+
+  const stationMarkers: MapMarker[] = nearbyStations
+    .filter((s): s is Station & { lat: number; lng: number } =>
+      s.lat !== undefined && s.lng !== undefined
+    )
+    .map(s => ({
+      id: s.id,
+      lat: s.lat,
+      lng: s.lng,
+      type: s.type,
+      label: s.name,
+    }));
+
+  // ── Tracking map data ────────────────────────────────────────────────────────
+
+  const trackingRoute =
+    trackedService && view === 'tracking'
+      ? getServiceRoute(trackedService.operator, trackedService.destination)
+      : [];
+
+  // ── Derived UI ───────────────────────────────────────────────────────────────
+
+  const platformLabel = selectedStation?.type === 'bus' ? 'Route' : 'Platform';
+
   return (
-    <PageShell>
-      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Clock className="w-8 h-8 text-brand" />
-          <h1 className="text-3xl font-bold text-gray-900">Live Departures</h1>
-        </div>
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-gray-600">
-            <MapPin className="w-5 h-5" />
-            <span className="font-medium">Nearby Stations & Stops</span>
-          </div>
-        </div>
-        <div className="space-y-3">
-          {nearbyStations.map(station => {
-            const stationDeps = MOCK_DEPARTURES[station.id] ?? [];
-            const hasLive = stationDeps.some(d => d.hasLiveTracking);
-            return (
-              <div
-                key={station.id}
-                onClick={() => handleStationClick(station)}
-                className="border border-gray-200 rounded-lg p-4 hover:border-brand hover:shadow-md transition cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-brand-light rounded-lg text-brand">
-                      {getTransportIcon(station.type)}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-lg">{station.name}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-gray-500 capitalize">{station.type} • {station.distance}</p>
-                        {hasLive && (
-                          <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            Live tracking available
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+    <PageShell fullHeight>
+      <style>{`
+        @keyframes panelIn {
+          from { opacity: 0; transform: translateY(24px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes panelOut {
+          from { opacity: 1; transform: translateY(0); }
+          to   { opacity: 0; transform: translateY(24px); }
+        }
+        .panel-enter {
+          animation: panelIn 0.3s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+        }
+        .panel-exit {
+          animation: panelOut 0.22s ease-in forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .panel-enter, .panel-exit { animation-duration: 0.01ms !important; }
+        }
+
+        /* Vehicle pulse ring used by LiveTrackingMap */
+        @keyframes vehiclePulse {
+          0%   { transform: scale(0.9); opacity: 0.7; }
+          70%  { transform: scale(1.4); opacity: 0; }
+          100% { transform: scale(1.4); opacity: 0; }
+        }
+        .vehicle-pulse-ring {
+          animation: vehiclePulse 2s ease-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .vehicle-pulse-ring { animation-duration: 0.01ms !important; }
+        }
+      `}</style>
+
+      {/* ── Background map ──────────────────────────────────────────────────── */}
+      <div className="absolute inset-0 pb-20">
+        {view === 'tracking' && trackedService && selectedStation ? (
+          <LiveTrackingMap
+            route={trackingRoute}
+            vehiclePosition={trackedService.vehiclePosition}
+            direction={trackedService.direction}
+            stationName={selectedStation.name}
+            stationType={selectedStation.type}
+            height="100%"
+          />
+        ) : (
+          <MapView
+            markers={stationMarkers}
+            onMarkerClick={handleMarkerClick}
+            height="100%"
+            zoom={13}
+          />
+        )}
+      </div>
+
+      {/* ── Tracking state: minimised strip ──────────────────────────────────── */}
+      {view === 'tracking' && trackedService && (
+        <div className="absolute bottom-20 left-0 right-0 z-[1500] pointer-events-none">
+          <div className="mx-3 mb-2 pointer-events-auto">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 px-4 py-3">
+              <div className="flex items-center gap-3">
+                {/* Back button */}
+                <button
+                  onClick={handleBackToBoard}
+                  className="shrink-0 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-1 transition-colors"
+                  aria-label="Back to departure board"
+                >
+                  ← Back
+                </button>
+
+                <div className="w-px h-8 bg-gray-200 shrink-0" aria-hidden="true" />
+
+                {/* Service info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 truncate">{trackedService.operator}</p>
+                  <p className="font-semibold text-sm truncate">{trackedService.destination}</p>
+                </div>
+
+                {/* Time + platform */}
+                <div className="shrink-0 text-right">
+                  <p className="font-bold text-base">{trackedService.time}</p>
+                  {trackedService.platform !== null && (
+                    <p className="text-xs text-gray-500">
+                      {platformLabel} {trackedService.platform}
+                    </p>
+                  )}
+                </div>
+
+                {/* LIVE badge */}
+                <div className="shrink-0 flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                  <span className="text-xs font-bold text-green-700 uppercase tracking-wide">Live</span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Stations / Board panel ────────────────────────────────────────────── */}
+      {isPanelVisible && view !== 'tracking' && (
+        <div
+          className={`absolute inset-0 z-[1500] pointer-events-none flex flex-col justify-end ${
+            isPanelExiting ? 'panel-exit' : 'panel-enter'
+          }`}
+          onAnimationEnd={onPanelAnimEnd}
+        >
+          {/* Scrollable bottom sheet — max ~70 vh, sits above BottomNav (80px) */}
+          <div
+            className="pointer-events-auto mx-0 mb-20"
+            style={{ maxHeight: '70vh' }}
+          >
+            <div className="bg-white rounded-t-2xl shadow-2xl border-t border-gray-100 flex flex-col overflow-hidden" style={{ maxHeight: '70vh' }}>
+
+              {/* ── Stations view ────────────────────────────────────────────── */}
+              {view === 'stations' && (
+                <>
+                  <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+                    {/* Drag handle — visual affordance */}
+                    <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" aria-hidden="true" />
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-6 h-6 text-brand shrink-0" aria-hidden="true" />
+                      <h1 className="text-xl font-bold text-gray-900">Live Departures</h1>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
+                      <MapPin className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>Nearby stations and stops</span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-y-auto flex-1 px-4 py-3 space-y-2">
+                    {nearbyStations.map(station => {
+                      const stationDeps = MOCK_DEPARTURES[station.id] ?? [];
+                      const hasLive = stationDeps.some(d => d.hasLiveTracking);
+                      return (
+                        <button
+                          key={station.id}
+                          onClick={() => handleSelectStation(station)}
+                          className="w-full text-left border border-gray-200 rounded-xl p-3.5 hover:border-brand hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-brand-tint focus:border-transparent"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="shrink-0 p-2 bg-brand-light rounded-lg text-brand">
+                                {getTransportIcon(station.type)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold truncate">{station.name}</p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm text-gray-500 capitalize">
+                                    {station.type}{station.distance ? ` • ${station.distance}` : ''}
+                                  </p>
+                                  {hasLive && (
+                                    <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+                                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                      Live tracking
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" aria-hidden="true" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {/* ── Board view ───────────────────────────────────────────────── */}
+              {view === 'board' && (
+                <>
+                  {/* Back button + station header */}
+                  <div className="px-4 pt-4 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" aria-hidden="true" />
+                    <button
+                      onClick={handleBackToStations}
+                      className="text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-1 mb-3 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-tint rounded"
+                    >
+                      ← Back to Stations
+                    </button>
+
+                    {selectedStation && (
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0 p-2 bg-brand-light rounded-lg text-brand">
+                          {getTransportIcon(selectedStation.type)}
+                        </div>
+                        <div className="min-w-0">
+                          <h1 className="text-lg font-bold truncate">{selectedStation.name}</h1>
+                          <p className="text-sm text-gray-500">Live Departures</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* sr-only aria-live region — WCAG 4.1.3 */}
+                  <div aria-live="polite" aria-atomic="true" className="sr-only">
+                    {isDeparturesLoading
+                      ? 'Loading departures…'
+                      : departures.length === 0
+                      ? 'No departures found'
+                      : `${departures.length} departure${departures.length !== 1 ? 's' : ''} listed`}
+                  </div>
+
+                  {/* Departure board — fixed column header + scrollable rows */}
+                  <div className="flex flex-col overflow-hidden flex-1">
+                    {/* Column header */}
+                    <div className="bg-brand text-white px-4 py-2.5">
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide">
+                        <div>Time</div>
+                        <div>Destination</div>
+                        <div className="hidden sm:block">{platformLabel}</div>
+                        <div>Status</div>
+                      </div>
+                    </div>
+
+                    {/* Rows */}
+                    <div className="divide-y overflow-y-auto flex-1">
+                      {isDeparturesLoading ? (
+                        <div className="p-6 text-center text-gray-500 text-sm">
+                          Loading departures…
+                        </div>
+                      ) : departures.length === 0 ? (
+                        <div className="p-6 text-center text-gray-500 text-sm">
+                          No departures found
+                        </div>
+                      ) : (
+                        departures.map(dep => (
+                          <div
+                            key={`${dep.operator}-${dep.destination}-${dep.time}`}
+                            onClick={() => handleTrackService(dep)}
+                            role={dep.hasLiveTracking ? 'button' : undefined}
+                            tabIndex={dep.hasLiveTracking ? 0 : undefined}
+                            onKeyDown={
+                              dep.hasLiveTracking
+                                ? e => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleTrackService(dep);
+                                    }
+                                  }
+                                : undefined
+                            }
+                            aria-label={
+                              dep.hasLiveTracking
+                                ? `Track ${dep.operator} to ${dep.destination}, departs ${dep.time}, ${dep.status}`
+                                : undefined
+                            }
+                            className={`px-4 py-3 transition-colors ${
+                              dep.hasLiveTracking
+                                ? 'hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint'
+                                : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 items-center">
+                              <div className="font-bold text-base">{dep.time}</div>
+
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm truncate">{dep.destination}</p>
+                                <p className="text-xs text-gray-500 truncate">{dep.operator}</p>
+                                {/* Platform chip — mobile only */}
+                                <span className="sm:hidden inline-block mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
+                                  {dep.platform !== null ? `${platformLabel} ${dep.platform}` : 'TBA'}
+                                </span>
+                              </div>
+
+                              {/* Platform — desktop only */}
+                              <div className="hidden sm:block font-semibold text-brand text-sm">
+                                {dep.platform !== null ? `${platformLabel} ${dep.platform}` : '—'}
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1">
+                                <span
+                                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    dep.status === 'On time'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-orange-100 text-orange-800'
+                                  }`}
+                                >
+                                  {dep.status}
+                                </span>
+                                {dep.hasLiveTracking && (
+                                  <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                    LIVE
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── View map / show board toggle ──────────────────────────────────────── */}
+      {view !== 'tracking' && (
+        <div className="absolute bottom-24 left-4 z-[2000]">
+          {isPanelVisible ? (
+            <button
+              onClick={() => {
+                triggerPanelExit(() => setIsPanelVisible(false));
+              }}
+              className="bg-brand text-white px-5 py-2.5 rounded-lg shadow-lg font-semibold hover:bg-brand-hover transition flex items-center gap-2 text-sm"
+            >
+              <MapPin className="w-4 h-4" aria-hidden="true" />
+              View map
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setIsPanelVisible(true);
+              }}
+              className="bg-brand text-white px-5 py-2.5 rounded-lg shadow-lg font-semibold hover:bg-brand-hover transition flex items-center gap-2 text-sm"
+            >
+              <Clock className="w-4 h-4" aria-hidden="true" />
+              Show departures
+            </button>
+          )}
+        </div>
+      )}
     </PageShell>
   );
 }

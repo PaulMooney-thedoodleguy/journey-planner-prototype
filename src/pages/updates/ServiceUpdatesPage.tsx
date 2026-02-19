@@ -25,7 +25,7 @@ export default function ServiceUpdatesPage() {
 
   const severityButtonClass = (sev: typeof SEVERITIES[0]) => {
     if (severity !== sev) return 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-    if (sev === 'all') return 'bg-indigo-600 text-white';
+    if (sev === 'all') return 'bg-brand text-white';
     if (sev === 'critical') return 'bg-red-500 text-white';
     if (sev === 'high') return 'bg-orange-500 text-white';
     if (sev === 'medium') return 'bg-yellow-500 text-white';
@@ -36,7 +36,7 @@ export default function ServiceUpdatesPage() {
     <PageShell>
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
-          <AlertTriangle className="w-8 h-8 text-indigo-600" />
+          <AlertTriangle className="w-8 h-8 text-brand" />
           <h1 className="text-3xl font-bold text-gray-900">Service Updates</h1>
         </div>
 
@@ -45,7 +45,7 @@ export default function ServiceUpdatesPage() {
             type="text" value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by location, operator, or service…"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent"
           />
           <div className="flex gap-2 flex-wrap">
             {SEVERITIES.map(sev => (

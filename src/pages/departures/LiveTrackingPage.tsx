@@ -12,7 +12,7 @@ export default function LiveTrackingPage() {
   if (!trackedService || !selectedStation) {
     return (
       <PageShell>
-        <button onClick={() => navigate(`/departures/${stationId}`)} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+        <button onClick={() => navigate(`/departures/${stationId}`)} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
           ← Back to Departures
         </button>
         <p className="text-gray-600">Service data unavailable. Please select a service from the departures board.</p>
@@ -24,7 +24,7 @@ export default function LiveTrackingPage() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate(`/departures/${stationId}`)} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+      <button onClick={() => navigate(`/departures/${stationId}`)} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
         ← Back to Departures
       </button>
 

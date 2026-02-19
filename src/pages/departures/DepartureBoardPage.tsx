@@ -27,14 +27,14 @@ export default function DepartureBoardPage() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/departures')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+      <button onClick={() => navigate('/departures')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
         ← Back to Stations
       </button>
 
       {selectedStation && (
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+            <div className="p-2 bg-brand-light rounded-lg text-brand">
               {getTransportIcon(selectedStation.type)}
             </div>
             <div>
@@ -47,7 +47,7 @@ export default function DepartureBoardPage() {
 
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header — 3 cols on mobile, 4 on sm+ */}
-        <div className="bg-indigo-600 text-white p-3 sm:p-4">
+        <div className="bg-brand text-white p-3 sm:p-4">
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 text-sm font-semibold">
             <div>Time</div>
             <div>Destination</div>
@@ -65,7 +65,7 @@ export default function DepartureBoardPage() {
             departures.map((dep) => (
               <div
                 key={`${dep.operator}-${dep.destination}-${dep.time}`}
-                className={`p-3 sm:p-4 transition ${dep.hasLiveTracking ? 'hover:bg-indigo-50 cursor-pointer' : 'hover:bg-gray-50'}`}
+                className={`p-3 sm:p-4 transition ${dep.hasLiveTracking ? 'hover:bg-brand-light cursor-pointer' : 'hover:bg-gray-50'}`}
                 onClick={() => handleTrackService(dep)}
               >
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4 items-center">
@@ -75,13 +75,13 @@ export default function DepartureBoardPage() {
                     <p className="font-semibold truncate">{dep.destination}</p>
                     <p className="text-sm text-gray-500 truncate">{dep.operator}</p>
                     {/* Platform shown inline on mobile only */}
-                    <p className="sm:hidden text-xs font-semibold text-indigo-600 mt-0.5">
+                    <p className="sm:hidden text-xs font-semibold text-brand mt-0.5">
                       {dep.platform !== null ? `${platformLabel} ${dep.platform}` : ''}
                     </p>
                   </div>
 
                   {/* Platform column — desktop only */}
-                  <div className="hidden sm:block font-semibold text-indigo-600">
+                  <div className="hidden sm:block font-semibold text-brand">
                     {dep.platform !== null ? `${platformLabel} ${dep.platform}` : dep.operator}
                   </div>
 

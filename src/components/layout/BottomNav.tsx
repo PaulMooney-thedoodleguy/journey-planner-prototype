@@ -29,12 +29,12 @@ export default function BottomNav() {
               onClick={() => navigate(tab.path)}
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative ${active ? 'text-indigo-600' : 'text-gray-600'}`}
+              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative ${active ? 'text-brand' : 'text-gray-600'}`}
             >
               <Icon className="w-6 h-6 mb-1" />
               <span className="text-xs font-medium">{tab.label}</span>
               {tab.path === '/tickets' && purchasedTickets.length > 0 && (
-                <div className="absolute top-1 right-1/4 bg-indigo-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <div className="absolute top-1 right-1/4 bg-brand text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {purchasedTickets.length}
                 </div>
               )}

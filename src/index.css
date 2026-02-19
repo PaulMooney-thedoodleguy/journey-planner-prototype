@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: #f4f5f8;
+  color: #222428;
+}
+
 /* Ensure Leaflet map fills its container */
 .leaflet-container {
   width: 100%;

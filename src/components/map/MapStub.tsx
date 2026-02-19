@@ -30,10 +30,10 @@ export default function MapStub({ markers = [], onMarkerClick, height = '100%' }
           style={{ left: `${m.lng}%`, top: `${m.lat}%` }}
         >
           <div className={`w-10 h-10 rounded-lg shadow-lg flex items-center justify-center bg-white border-2 ${
-            m.type === 'train' ? 'border-indigo-600 hover:bg-indigo-50' : 'border-orange-500 hover:bg-orange-50'
+            m.type === 'train' ? 'border-brand hover:bg-brand-light' : 'border-orange-500 hover:bg-orange-50'
           }`}>
             {m.type === 'train'
-              ? <Train className="w-5 h-5 text-indigo-600" />
+              ? <Train className="w-5 h-5 text-brand" />
               : <Bus className="w-5 h-5 text-orange-500" />}
           </div>
           {m.label && (

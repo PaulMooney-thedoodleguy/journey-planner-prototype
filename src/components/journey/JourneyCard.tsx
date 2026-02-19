@@ -20,7 +20,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
     ? 'border-blue-500 bg-blue-50/50'
     : isCheapest
     ? 'border-purple-500 bg-purple-50/50'
-    : 'border-gray-200 hover:border-indigo-500';
+    : 'border-gray-200 hover:border-brand';
 
   return (
     <div className={`border-2 rounded-lg p-4 sm:p-6 hover:shadow-md transition ${borderClass}`}>
@@ -57,7 +57,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
         {/* Left: operator + journey times */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">{getTransportIcon(j.type)}</div>
+            <div className="p-2 bg-brand-light rounded-lg text-brand shrink-0">{getTransportIcon(j.type)}</div>
             <div className="min-w-0">
               <p className="font-semibold text-base sm:text-lg truncate">{j.operator}</p>
               <p className="text-sm text-gray-500">
@@ -102,12 +102,12 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
               <span className="text-xs font-semibold">{j.co2} kg CO₂</span>
             </div>
             <p className="text-xs text-gray-500 mb-0.5 sm:mb-1">{ticketType === 'single' ? 'Single' : 'Return'}</p>
-            <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{formatPrice(j.price[ticketType])}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-brand">{formatPrice(j.price[ticketType])}</p>
           </div>
 
           <button
             onClick={() => onSelect(j)}
-            className="shrink-0 px-5 py-2 sm:mt-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-1.5"
+            className="shrink-0 px-5 py-2 sm:mt-3 bg-brand text-white rounded-lg hover:bg-brand-hover transition flex items-center gap-1.5"
           >
             Select <ChevronRight className="w-4 h-4" />
           </button>

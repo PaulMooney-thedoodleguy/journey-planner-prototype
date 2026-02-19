@@ -97,7 +97,7 @@ export default function SearchPage() {
   };
 
   const inputClass = (field: string) =>
-    `flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
+    `flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <PageShell fullHeight>
@@ -136,7 +136,7 @@ export default function SearchPage() {
       <div className="absolute bottom-24 left-4 z-[2000]">
         <button
           onClick={handleToggle}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold hover:bg-indigo-700 transition flex items-center gap-2"
+          className="bg-brand text-white px-6 py-3 rounded-lg shadow-lg font-semibold hover:bg-brand-hover transition flex items-center gap-2"
         >
           {showMap || isExiting
             ? <><Search className="w-5 h-5" />Show Form</>
@@ -159,7 +159,7 @@ export default function SearchPage() {
               <div className="w-full max-w-2xl">
                 <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8">
                   <div className="flex items-center gap-3 mb-6">
-                    <Train className="w-8 h-8 text-indigo-600" />
+                    <Train className="w-8 h-8 text-brand" />
                     <h1 className="text-3xl font-bold text-gray-900">Plan Your Journey</h1>
                   </div>
 
@@ -174,7 +174,7 @@ export default function SearchPage() {
                           placeholder="e.g. London Kings Cross"
                           className={inputClass('from')}
                         />
-                        <button onClick={swapLocations} aria-label="Swap departure and destination" className="bg-indigo-100 hover:bg-indigo-200 text-indigo-600 p-3 rounded-lg transition-colors">
+                        <button onClick={swapLocations} aria-label="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors">
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                           </svg>
@@ -194,7 +194,7 @@ export default function SearchPage() {
                           className={inputClass('to')}
                         />
                         {/* Route through handleToggle to play the exit animation before showing map */}
-                        <button onClick={handleToggle} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition flex items-center gap-2">
+                        <button onClick={handleToggle} className="bg-brand hover:bg-brand-hover text-white px-4 py-3 rounded-lg transition flex items-center gap-2">
                           <MapPin className="w-5 h-5" /><span className="text-sm font-medium">Map</span>
                         </button>
                       </div>
@@ -245,7 +245,7 @@ export default function SearchPage() {
                     <button
                       onClick={handleSearch}
                       disabled={isSearching}
-                      className="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                      className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2 disabled:opacity-60"
                     >
                       <Search className="w-5 h-5" />
                       {isSearching ? 'Searching…' : 'Search Journeys'}

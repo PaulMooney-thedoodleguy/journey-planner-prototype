@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# Claude Code internal files
+.claude/
+
 # Environment files — NEVER commit real keys
 .env
 .env.local

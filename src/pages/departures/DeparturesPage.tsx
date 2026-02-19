@@ -18,7 +18,7 @@ export default function DeparturesPage() {
     <PageShell>
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
-          <Clock className="w-8 h-8 text-indigo-600" />
+          <Clock className="w-8 h-8 text-brand" />
           <h1 className="text-3xl font-bold text-gray-900">Live Departures</h1>
         </div>
         <div className="mb-6">
@@ -35,11 +35,11 @@ export default function DeparturesPage() {
               <div
                 key={station.id}
                 onClick={() => handleStationClick(station)}
-                className="border border-gray-200 rounded-lg p-4 hover:border-indigo-500 hover:shadow-md transition cursor-pointer"
+                className="border border-gray-200 rounded-lg p-4 hover:border-brand hover:shadow-md transition cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                    <div className="p-2 bg-brand-light rounded-lg text-brand">
                       {getTransportIcon(station.type)}
                     </div>
                     <div>

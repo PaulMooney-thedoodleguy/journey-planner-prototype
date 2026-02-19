@@ -48,11 +48,11 @@ export default function CheckoutPage() {
   };
 
   const fieldClass = (field: string) =>
-    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
+    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/results')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+      <button onClick={() => navigate('/results')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
         ← Back to Results
       </button>
 
@@ -81,7 +81,7 @@ export default function CheckoutPage() {
             {errors.cardNumber && <p className="text-red-600 text-xs mt-1">{errors.cardNumber}</p>}
           </div>
           <button onClick={handlePayment}
-            className="w-full bg-indigo-600 text-white py-4 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+            className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2">
             <CreditCard className="w-5 h-5" />
             Pay {formatPrice(selectedJourney.price[searchParams.ticketType])}
           </button>

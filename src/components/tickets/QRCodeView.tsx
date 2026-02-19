@@ -28,7 +28,7 @@ export default function QRCodeView({ ticket }: { ticket: PurchasedTicket }) {
           </div>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-white p-2 rounded">
-              <QrCode className="w-8 h-8 text-indigo-600" />
+              <QrCode className="w-8 h-8 text-brand" />
             </div>
           </div>
         </div>

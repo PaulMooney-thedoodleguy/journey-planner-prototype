@@ -29,7 +29,7 @@ function stopIcon(stop: RouteStop, currentStationName: string) {
   const isCurrent = stop.name === currentStationName;
   const isTrain   = stop.type === 'train';
   const bg        = isCurrent ? '#22c55e' : 'white';
-  const border    = isCurrent ? '#16a34a' : (isTrain ? '#4f46e5' : '#f97316');
+  const border    = isCurrent ? '#16a34a' : (isTrain ? '#0054e9' : '#f97316');
   const ring      = isCurrent ? 'box-shadow:0 0 0 4px rgba(34,197,94,0.35),0 2px 8px rgba(0,0,0,0.2)' : 'box-shadow:0 2px 6px rgba(0,0,0,0.15)';
 
   const svg = isCurrent
@@ -57,8 +57,8 @@ function vehicleIcon(type: TransportMode) {
   return L.divIcon({
     html: `
       <div style="position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center;">
-        <div class="vehicle-pulse-ring" style="position:absolute;inset:0;background:rgba(37,99,235,0.28);border-radius:50%;"></div>
-        <div style="width:40px;height:40px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.3);border:3px solid white;position:relative;z-index:1;">
+        <div class="vehicle-pulse-ring" style="position:absolute;inset:0;background:rgba(0,84,233,0.28);border-radius:50%;"></div>
+        <div style="width:40px;height:40px;background:#0054e9;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.3);border:3px solid white;position:relative;z-index:1;">
           ${svg}
           <div style="position:absolute;top:-2px;right:-2px;width:11px;height:11px;background:#4ade80;border-radius:50%;border:2px solid white;"></div>
         </div>
@@ -95,7 +95,7 @@ export default function LiveTrackingMap({
 
         {/* Route polyline */}
         {positions.length > 1 && (
-          <Polyline positions={positions} color="#4f46e5" weight={3} dashArray="10 5" />
+          <Polyline positions={positions} color="#0054e9" weight={3} dashArray="10 5" />
         )}
 
         {/* Stop markers */}

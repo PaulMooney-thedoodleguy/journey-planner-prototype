@@ -26,7 +26,7 @@ export default function ResultsPage() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+      <button onClick={() => navigate('/')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
         ← Back to Search
       </button>
 
@@ -52,7 +52,7 @@ export default function ResultsPage() {
             <p className="text-sm mb-6">Try adjusting your search or selecting a different date.</p>
             <button
               onClick={() => navigate('/')}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+              className="bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-hover transition"
             >
               Back to Search
             </button>

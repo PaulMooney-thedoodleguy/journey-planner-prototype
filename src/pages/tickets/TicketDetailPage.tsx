@@ -17,7 +17,7 @@ export default function TicketDetailPage() {
   if (!ticket) {
     return (
       <PageShell>
-        <button onClick={() => navigate('/tickets')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+        <button onClick={() => navigate('/tickets')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
           ← Back to Tickets
         </button>
         <p className="text-gray-600">Ticket not found.</p>
@@ -28,20 +28,20 @@ export default function TicketDetailPage() {
   return (
     <PageShell>
       <div className="max-w-2xl mx-auto">
-        <button onClick={() => navigate('/tickets')} className="mb-4 text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-2">
+        <button onClick={() => navigate('/tickets')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
           ← Back to Tickets
         </button>
 
         <div className="mb-6 flex gap-3">
           <button
             onClick={() => setTicketView('qr')}
-            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'qr' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'qr' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
           >
             <QrCode className="w-5 h-5" />QR Code
           </button>
           <button
             onClick={() => setTicketView('visual')}
-            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'visual' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'visual' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
           >
             <Eye className="w-5 h-5" />Visual Validation
           </button>

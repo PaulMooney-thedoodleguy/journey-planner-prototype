@@ -34,7 +34,7 @@ export default function TicketWalletPage() {
     <PageShell>
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-6">
-          <Wallet className="w-8 h-8 text-indigo-600" />
+          <Wallet className="w-8 h-8 text-brand" />
           <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
         </div>
 
@@ -44,7 +44,7 @@ export default function TicketWalletPage() {
             <h3 className="text-xl font-semibold text-gray-700 mb-2">No tickets yet</h3>
             <p className="text-gray-500 mb-6">Your purchased tickets will appear here</p>
             <button onClick={() => navigate('/')}
-              className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+              className="bg-brand text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-hover transition">
               Plan a Journey
             </button>
           </div>
@@ -55,16 +55,16 @@ export default function TicketWalletPage() {
                 const isExpanded = expandedGroup === item.groupId;
                 const first = item.tickets[0];
                 return (
-                  <div key={`group-${item.groupId}`} className="border-2 border-indigo-600 rounded-lg p-6 bg-gradient-to-br from-indigo-50 to-purple-50">
+                  <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-lg p-6 bg-brand-light">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-indigo-100 rounded-lg">
-                        <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="p-2 bg-brand-light rounded-lg">
+                        <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                         </svg>
                       </div>
                       <div>
-                        <p className="font-semibold text-lg text-indigo-900">Multi-Modal Journey</p>
-                        <p className="text-sm text-indigo-600">{item.tickets.length} tickets required</p>
+                        <p className="font-semibold text-lg text-content-primary">Multi-Modal Journey</p>
+                        <p className="text-sm text-brand">{item.tickets.length} tickets required</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 mb-3">
@@ -83,12 +83,12 @@ export default function TicketWalletPage() {
                       ))}
                     </div>
                     <button onClick={() => setExpandedGroup(isExpanded ? null : item.groupId)}
-                      className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2">
+                      className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2">
                       {isExpanded ? 'Hide Individual Tickets' : 'View Individual Tickets'}
                       <ChevronRight className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </button>
                     {isExpanded && (
-                      <div className="mt-4 space-y-3 pt-4 border-t border-indigo-200">
+                      <div className="mt-4 space-y-3 pt-4 border-t border-brand-light">
                         {item.tickets.map(t => (
                           <div key={t.id}
                             className="border-2 rounded-lg p-4 bg-white hover:shadow-md transition cursor-pointer"
@@ -121,7 +121,7 @@ export default function TicketWalletPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-indigo-100 rounded-lg">{getTransportIcon(t.journey.type)}</div>
+                          <div className="p-2 bg-brand-light rounded-lg">{getTransportIcon(t.journey.type)}</div>
                           <div>
                             <p className="font-semibold text-lg">{t.journey.operator}</p>
                             <p className="text-sm text-gray-500">Ref: {t.reference}</p>
@@ -134,7 +134,7 @@ export default function TicketWalletPage() {
                           <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{t.journey.departure}</p></div>
                         </div>
                       </div>
-                      <button className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">View</button>
+                      <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition">View</button>
                     </div>
                   </div>
                 );

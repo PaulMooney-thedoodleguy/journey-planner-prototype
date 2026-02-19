@@ -9,8 +9,8 @@ import type { JourneySearchParams, MapMarker } from '../../types';
 
 const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
   id: s.id,
-  lat: s.y ?? 50,
-  lng: s.x ?? 50,
+  lat: s.lat ?? 51.515,
+  lng: s.lng ?? -0.13,
   type: s.type,
   label: s.name,
 }));

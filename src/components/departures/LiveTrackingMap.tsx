@@ -1,112 +1,135 @@
-import { Train, Bus, Navigation, MapPin } from 'lucide-react';
+import { useEffect } from 'react';
+import L from 'leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
 import type { RouteStop, TransportMode } from '../../types';
-import { getDirectionRotation } from '../../utils/transport';
 
 interface LiveTrackingMapProps {
   route: RouteStop[];
-  vehiclePosition?: { x: number; y: number };
+  vehiclePosition?: { lat: number; lng: number };
   direction?: string;
   stationName: string;
   stationType: TransportMode;
   height?: string;
 }
 
-function StopIcon({ type, isCurrent }: { type: TransportMode; isCurrent: boolean }) {
-  if (isCurrent) return <MapPin className="w-5 h-5 text-white" />;
-  if (type === 'train') return <Train className="w-5 h-5 text-indigo-600" />;
-  if (type === 'bus') return <Bus className="w-5 h-5 text-orange-500" />;
-  return <Navigation className="w-5 h-5 text-indigo-600" />;
+// Auto-fit map to show the full route on mount/change
+function FitRoute({ positions }: { positions: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (positions.length > 1) {
+      map.fitBounds(positions, { padding: [40, 40] });
+    } else if (positions.length === 1) {
+      map.setView(positions[0], 13);
+    }
+  }, [map, positions]);
+  return null;
+}
+
+function stopIcon(stop: RouteStop, currentStationName: string) {
+  const isCurrent = stop.name === currentStationName;
+  const isTrain   = stop.type === 'train';
+  const bg        = isCurrent ? '#22c55e' : 'white';
+  const border    = isCurrent ? '#16a34a' : (isTrain ? '#4f46e5' : '#f97316');
+  const ring      = isCurrent ? 'box-shadow:0 0 0 4px rgba(34,197,94,0.35),0 2px 8px rgba(0,0,0,0.2)' : 'box-shadow:0 2px 6px rgba(0,0,0,0.15)';
+
+  const svg = isCurrent
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>`
+    : isTrain
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${border}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 2H8"/><path d="M12 2v5"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${border}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="16" height="12" rx="2"/><path d="M16 11h4l3 4v2h-7V11z"/><circle cx="5.5" cy="19" r="1.5"/><circle cx="18.5" cy="19" r="1.5"/></svg>`;
+
+  return L.divIcon({
+    html: `<div style="width:34px;height:34px;border-radius:8px;background:${bg};border:2.5px solid ${border};display:flex;align-items:center;justify-content:center;${ring};">${svg}</div>`,
+    className: '',
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -22],
+  });
+}
+
+function vehicleIcon(type: TransportMode) {
+  const svg = type === 'train'
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 2H8"/><path d="M12 2v5"/><circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/></svg>`
+    : type === 'bus'
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="7" width="16" height="12" rx="2"/><path d="M16 11h4l3 4v2h-7V11z"/><circle cx="5.5" cy="19" r="1.5"/><circle cx="18.5" cy="19" r="1.5"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3,11 22,2 13,21 11,13 3,11"/></svg>`;
+
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:52px;height:52px;display:flex;align-items:center;justify-content:center;">
+        <div class="vehicle-pulse-ring" style="position:absolute;inset:0;background:rgba(37,99,235,0.28);border-radius:50%;"></div>
+        <div style="width:40px;height:40px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,0.3);border:3px solid white;position:relative;z-index:1;">
+          ${svg}
+          <div style="position:absolute;top:-2px;right:-2px;width:11px;height:11px;background:#4ade80;border-radius:50%;border:2px solid white;"></div>
+        </div>
+      </div>`,
+    className: '',
+    iconSize: [52, 52],
+    iconAnchor: [26, 26],
+    popupAnchor: [0, -30],
+  });
 }
 
 export default function LiveTrackingMap({
-  route, vehiclePosition, direction, stationName, stationType, height = '500px',
+  route,
+  vehiclePosition,
+  stationName,
+  stationType,
+  height = 'min(500px, calc(100vh - 280px))',
 }: LiveTrackingMapProps) {
+  const positions: [number, number][] = route.map(s => [s.lat, s.lng]);
+  const defaultCenter: [number, number] = positions[0] ?? [52.5, -1.5];
+
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ height }}>
-      <div className="relative w-full h-full bg-gray-100">
-        {/* Grid */}
-        <div className="absolute inset-0">
-          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(y => (
-            <div key={`h${y}`} className="absolute w-full border-t-2 border-gray-300" style={{ top: `${y}%` }} />
-          ))}
-          {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(x => (
-            <div key={`v${x}`} className="absolute h-full border-l-2 border-gray-300" style={{ left: `${x}%` }} />
-          ))}
-        </div>
+      <MapContainer
+        center={defaultCenter}
+        zoom={6}
+        style={{ width: '100%', height: '100%' }}
+        scrollWheelZoom
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
         {/* Route polyline */}
-        {route.length > 1 && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-            <polyline
-              points={route.map(s => `${s.x}%,${s.y}%`).join(' ')}
-              fill="none" stroke="#4f46e5" strokeWidth="3" strokeDasharray="8,4"
-            />
-          </svg>
+        {positions.length > 1 && (
+          <Polyline positions={positions} color="#4f46e5" weight={3} dashArray="10 5" />
         )}
 
-        {/* Station stops */}
-        {route.map((stop, idx) => {
-          const isCurrent = stop.name === stationName;
-          return (
-            <div key={idx}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 group"
-              style={{ left: `${stop.x}%`, top: `${stop.y}%`, zIndex: 10 }}
-            >
-              <div className={isCurrent ? 'scale-125' : ''}>
-                <div className={`w-10 h-10 rounded-lg shadow-lg flex items-center justify-center border-2 ${
-                  isCurrent ? 'bg-green-500 border-green-600 ring-4 ring-green-300'
-                    : stop.type === 'train' ? 'bg-white border-indigo-600'
-                    : 'bg-white border-orange-500'
-                }`}>
-                  <StopIcon type={stop.type} isCurrent={isCurrent} />
-                </div>
-                <div className="absolute top-12 left-1/2 transform -translate-x-1/2 whitespace-nowrap bg-white px-2 py-1 rounded shadow-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  {stop.name}{isCurrent && <span className="text-green-600 ml-1">📍</span>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {/* Stop markers */}
+        {route.map((stop, idx) => (
+          <Marker
+            key={idx}
+            position={[stop.lat, stop.lng]}
+            icon={stopIcon(stop, stationName)}
+          >
+            <Popup>
+              <span className="font-medium text-sm">
+                {stop.name}
+                {stop.name === stationName && ' 📍 You are here'}
+              </span>
+            </Popup>
+          </Marker>
+        ))}
 
         {/* Live vehicle marker */}
         {vehiclePosition && (
-          <div
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 group"
-            style={{ left: `${vehiclePosition.x}%`, top: `${vehiclePosition.y}%`, zIndex: 20 }}
+          <Marker
+            position={[vehiclePosition.lat, vehiclePosition.lng]}
+            icon={vehicleIcon(stationType)}
+            zIndexOffset={1000}
           >
-            <style>{`@keyframes pulse-ring{0%{transform:scale(0.8);opacity:1}50%{transform:scale(1.2);opacity:0.7}100%{transform:scale(0.8);opacity:1}}`}</style>
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-16 h-16 bg-blue-500 rounded-full opacity-30"
-                style={{ animation: 'pulse-ring 2s ease-in-out infinite' }} />
-              <div className="w-12 h-12 bg-blue-600 rounded-full shadow-xl flex items-center justify-center relative z-10 ring-4 ring-white">
-                {stationType === 'train' ? <Train className="w-7 h-7 text-white" />
-                  : stationType === 'bus' ? <Bus className="w-7 h-7 text-white" />
-                  : <Navigation className="w-7 h-7 text-white" />}
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"
-                  style={{ boxShadow: '0 0 10px rgba(34,197,94,0.8)' }} />
-              </div>
-              {direction && (
-                <div
-                  className="absolute pointer-events-none"
-                  style={{
-                    top: '-24px', left: '50%',
-                    transform: `translateX(-50%) rotate(${getDirectionRotation(direction)}deg)`,
-                    transformOrigin: 'center 30px', zIndex: 30,
-                  }}
-                >
-                  <div style={{
-                    width: 0, height: 0,
-                    borderLeft: '12px solid transparent',
-                    borderRight: '12px solid transparent',
-                    borderBottom: '18px solid white',
-                    filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
-                  }} />
-                </div>
-              )}
-            </div>
-          </div>
+            <Popup>
+              <span className="font-medium text-sm text-green-600">🟢 Live vehicle position</span>
+            </Popup>
+          </Marker>
         )}
-      </div>
+
+        {/* Auto-fit to route */}
+        <FitRoute positions={positions} />
+      </MapContainer>
     </div>
   );
 }

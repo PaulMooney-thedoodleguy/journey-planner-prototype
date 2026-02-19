@@ -7,13 +7,12 @@ export const NEARBY_STATIONS: Station[] = [
   { id: 4, name: 'Kings Cross Bus Stop', type: 'bus', distance: '0.1 miles' },
 ];
 
-// x = lng equivalent (left %), y = lat equivalent (top %) for the CSS map stub
 export const MAP_STATIONS: Station[] = [
-  { id: 1, name: 'London Kings Cross', type: 'train', x: 45, y: 55 },
-  { id: 2, name: 'London St Pancras', type: 'train', x: 46, y: 56 },
-  { id: 3, name: 'Euston Station', type: 'train', x: 43, y: 53 },
-  { id: 4, name: 'London Victoria', type: 'train', x: 44, y: 68 },
-  { id: 5, name: 'Liverpool Street', type: 'train', x: 52, y: 58 },
-  { id: 6, name: 'Kings Cross Bus Stop', type: 'bus', x: 45, y: 54 },
-  { id: 7, name: 'Victoria Coach', type: 'bus', x: 44, y: 69 },
+  { id: 1, name: 'London Kings Cross',  type: 'train', lat: 51.5309, lng: -0.1233 },
+  { id: 2, name: 'London St Pancras',   type: 'train', lat: 51.5320, lng: -0.1271 },
+  { id: 3, name: 'Euston Station',      type: 'train', lat: 51.5282, lng: -0.1337 },
+  { id: 4, name: 'London Victoria',     type: 'train', lat: 51.4952, lng: -0.1441 },
+  { id: 5, name: 'Liverpool Street',    type: 'train', lat: 51.5178, lng: -0.0823 },
+  { id: 6, name: 'Kings Cross Bus Stop',type: 'bus',   lat: 51.5302, lng: -0.1205 },
+  { id: 7, name: 'Victoria Coach',      type: 'bus',   lat: 51.4961, lng: -0.1476 },
 ];

@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure Leaflet map fills its container */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Vehicle live tracking marker — pulsing ring */
+@keyframes vehicle-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; }
+  50%       { transform: scale(1.2); opacity: 0.4; }
+}
+.vehicle-pulse-ring {
+  animation: vehicle-pulse 2s ease-in-out infinite;
+}

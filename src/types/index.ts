@@ -76,8 +76,8 @@ export interface Station {
   name: string;
   type: TransportMode;
   distance?: string;
-  x?: number; // CSS map percentage (also used as lng for MapMarker)
-  y?: number; // CSS map percentage (also used as lat for MapMarker)
+  lat?: number;
+  lng?: number;
 }
 
 export interface Departure {
@@ -87,14 +87,14 @@ export interface Departure {
   operator: string;
   status: string;
   hasLiveTracking: boolean;
-  vehiclePosition?: { x: number; y: number };
+  vehiclePosition?: { lat: number; lng: number };
   direction?: string;
 }
 
 export interface RouteStop {
   name: string;
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
   type: TransportMode;
 }
 
@@ -114,8 +114,8 @@ export interface Disruption {
 
 export interface MapMarker {
   id: string | number;
-  lat: number; // y percentage in stub, real lat when Google Maps active
-  lng: number; // x percentage in stub, real lng when Google Maps active
+  lat: number;
+  lng: number;
   type: TransportMode;
   label?: string;
 }

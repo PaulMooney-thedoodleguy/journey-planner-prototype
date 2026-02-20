@@ -1,37 +1,25 @@
-import { useState } from 'react';
+import { useState, createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
-import ModeIcon from '../icons/ModeIcon';
+import ModeIcon, { ICONS } from '../icons/ModeIcon';
+import { getModeHex } from '../../utils/transport';
 import { MODE_CONFIG } from '../../config/brand';
-
-/** Raw hex colour for a transport mode from the single brand config source. */
-function modeHex(type: TransportMode): string {
-  return MODE_CONFIG[type as keyof typeof MODE_CONFIG]?.hex ?? '#374151';
-}
 
 /**
  * Leaflet DivIcon for a station marker.
- * Uses the mode hex for light-tinted bg + coloured border + coloured SVG icon,
- * matching the card icon container style.
+ * Uses the same react-icons/md components as ModeIcon — single source of truth.
+ * White bg + coloured border matches the card icon container style.
  */
 function stationIcon(type: TransportMode) {
-  const hex = modeHex(type);
-
-  const svg = type === 'bus'
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${hex}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="1" y="7" width="16" height="12" rx="2"/><path d="M16 11h4l3 4v2h-7V11z"/>
-        <circle cx="5.5" cy="19" r="1.5"/><circle cx="18.5" cy="19" r="1.5"/>
-       </svg>`
-    : `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${hex}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="7" width="20" height="13" rx="2"/><path d="M16 2H8"/><path d="M12 2v5"/>
-        <circle cx="7" cy="17" r="1.5"/><circle cx="17" cy="17" r="1.5"/>
-        <path d="M5 21l1.5-3"/><path d="M19 21l-1.5-3"/>
-       </svg>`;
+  const hex = getModeHex(type);
+  const Icon = ICONS[type] ?? ICONS['train'];
+  const svg = renderToStaticMarkup(createElement(Icon, { size: 20, color: hex }));
 
   return L.divIcon({
-    html: `<div style="width:36px;height:36px;border-radius:8px;background:${hex}1a;border:2.5px solid ${hex};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.18);">${svg}</div>`,
+    html: `<div style="width:36px;height:36px;border-radius:8px;background:white;border:2.5px solid ${hex};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.18);">${svg}</div>`,
     className: '',
     iconSize: [36, 36],
     iconAnchor: [18, 18],
@@ -149,7 +137,7 @@ export default function MapView({
 
               {/* One toggle button per mode present in the marker data */}
               {availableModes.map(mode => {
-                const hex = modeHex(mode);
+                const hex = getModeHex(mode);
                 const label = MODE_CONFIG[mode as keyof typeof MODE_CONFIG]?.label ?? mode;
                 const isActive = activeModes.has(mode);
 
@@ -158,7 +146,7 @@ export default function MapView({
                     key={mode}
                     onClick={() => toggleMode(mode)}
                     style={isActive ? {
-                      backgroundColor: `${hex}1a`,
+                      backgroundColor: 'white',
                       borderColor: hex,
                       color: hex,
                     } : {}}

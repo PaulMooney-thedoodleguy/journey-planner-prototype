@@ -11,7 +11,7 @@ import {
 import type { IconType } from 'react-icons';
 import type { TransportMode } from '../../types';
 
-const ICONS: Record<string, IconType> = {
+export const ICONS: Record<string, IconType> = {
   train:      MdTrain,
   bus:        MdDirectionsBus,
   tram:       MdTram,

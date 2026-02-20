@@ -1,0 +1,25 @@
+# Security headers — Netlify format (DO-6)
+#
+# Applied to all routes. This file is copied to dist/ by Vite at build time
+# and read by Netlify's CDN edge layer on every response.
+#
+# For Vercel: add an equivalent "headers" array to vercel.json.
+# For plain nginx/Apache: translate each directive to server config blocks.
+#
+# CSP rationale:
+#   script-src 'self'          — Vite bundles all JS to self-hosted modules; no CDN scripts
+#   style-src  'unsafe-inline' — Leaflet applies inline styles to map/marker DOM elements;
+#                                removing this breaks the map. Tighten with nonces if SSR is added.
+#   img-src *.tile.openstreetmap.org — react-leaflet fetches OSM tile images as <img> elements
+#   img-src data: blob:        — Leaflet marker icon data URIs and canvas blobs
+#   worker-src blob:           — Workbox service worker uses blob: URLs for runtime caching
+#   connect-src 'self'         — All API calls are to the same origin (mocked); extend when
+#                                real TfL / National Rail endpoints are added
+#   frame-ancestors 'none'     — Equivalent to X-Frame-Options: DENY; prevents clickjacking
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self'; font-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), microphone=(), camera=()

@@ -1,22 +1,25 @@
-import TrainIcon      from '../../assets/icons/modes/train.svg?react';
-import BusIcon        from '../../assets/icons/modes/bus.svg?react';
-import TramIcon       from '../../assets/icons/modes/tram.svg?react';
-import FerryIcon      from '../../assets/icons/modes/ferry.svg?react';
-import TubeIcon       from '../../assets/icons/modes/tube.svg?react';
-import WalkIcon       from '../../assets/icons/modes/walk.svg?react';
-import CycleIcon      from '../../assets/icons/modes/cycle.svg?react';
-import MultimodalIcon from '../../assets/icons/modes/multimodal.svg?react';
+import {
+  MdTrain,
+  MdDirectionsBus,
+  MdTram,
+  MdDirectionsBoat,
+  MdDirectionsSubway,
+  MdDirectionsWalk,
+  MdDirectionsBike,
+  MdSyncAlt,
+} from 'react-icons/md';
+import type { IconType } from 'react-icons';
 import type { TransportMode } from '../../types';
 
-const ICONS: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  train:      TrainIcon,
-  bus:        BusIcon,
-  tram:       TramIcon,
-  ferry:      FerryIcon,
-  tube:       TubeIcon,
-  walk:       WalkIcon,
-  cycle:      CycleIcon,
-  multimodal: MultimodalIcon,
+const ICONS: Record<string, IconType> = {
+  train:      MdTrain,
+  bus:        MdDirectionsBus,
+  tram:       MdTram,
+  ferry:      MdDirectionsBoat,
+  tube:       MdDirectionsSubway,
+  walk:       MdDirectionsWalk,
+  cycle:      MdDirectionsBike,
+  multimodal: MdSyncAlt,
 };
 
 export default function ModeIcon({
@@ -26,6 +29,6 @@ export default function ModeIcon({
   mode: TransportMode;
   className?: string;
 }) {
-  const Icon = ICONS[mode] ?? TrainIcon;
+  const Icon = ICONS[mode] ?? MdTrain;
   return <Icon className={className} aria-hidden="true" />;
 }

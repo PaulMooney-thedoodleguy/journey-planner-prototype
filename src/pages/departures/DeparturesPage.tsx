@@ -6,7 +6,7 @@ import MapView from '../../components/map/MapView';
 import LiveTrackingMap from '../../components/departures/LiveTrackingMap';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
-import { getTransportIcon, getModeContainerClasses } from '../../utils/transport';
+import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { MOCK_DEPARTURES, getServiceRoute } from '../../data/departures';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -388,7 +388,10 @@ export default function DeparturesPage() {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`shrink-0 p-2 ${getModeContainerClasses(station.type)} rounded-lg`}>
+                          <div
+                            style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(station.type)}`, color: getModeHex(station.type) }}
+                            className="shrink-0 p-2 rounded-lg"
+                          >
                             {getTransportIcon(station.type)}
                           </div>
                           <div className="min-w-0">
@@ -428,7 +431,10 @@ export default function DeparturesPage() {
 
                 {selectedStation && (
                   <div className="flex items-center gap-3">
-                    <div className={`shrink-0 p-2 ${getModeContainerClasses(selectedStation.type)} rounded-lg`}>
+                    <div
+                      style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(selectedStation.type)}`, color: getModeHex(selectedStation.type) }}
+                      className="shrink-0 p-2 rounded-lg"
+                    >
                       {getTransportIcon(selectedStation.type)}
                     </div>
                     <div className="min-w-0">

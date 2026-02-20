@@ -91,10 +91,10 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
 
       {/* ── Operator row ────────────────────────────────────────────────── */}
       <div className="px-4 pt-2.5 pb-3 flex items-center gap-2.5">
-        {/* Map-marker style: light tinted bg + coloured border + coloured icon */}
+        {/* White bg + coloured border + coloured icon */}
         <div
           style={{
-            backgroundColor: `${getModeHex(j.type)}1a`,
+            backgroundColor: 'white',
             border: `2px solid ${getModeHex(j.type)}`,
             color: getModeHex(j.type),
           }}

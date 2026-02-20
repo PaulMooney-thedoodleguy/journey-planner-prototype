@@ -19,15 +19,16 @@ export default function PageShell({ children, fullHeight = false, centered = fal
       </a>
 
       {fullHeight ? (
-        <main id="main-content" className="absolute inset-0">
+        // lg:top-16 shifts the map+drawer content below the 64px TopNav on desktop.
+        <main id="main-content" className="absolute inset-0 lg:top-16">
           {children}
         </main>
       ) : centered ? (
-        <main id="main-content" className="flex items-center justify-center min-h-screen pb-20">
+        <main id="main-content" className="flex items-center justify-center min-h-screen pb-20 lg:pt-16">
           {children}
         </main>
       ) : (
-        <main id="main-content" className="max-w-4xl mx-auto p-4 sm:p-6 pb-20">
+        <main id="main-content" className="max-w-4xl mx-auto p-4 sm:p-6 pb-20 lg:pt-20">
           {children}
         </main>
       )}

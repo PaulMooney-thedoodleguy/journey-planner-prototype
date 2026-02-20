@@ -33,3 +33,13 @@ select:focus-visible {
 .vehicle-pulse-ring {
   animation: vehicle-pulse 2s ease-in-out infinite;
 }
+
+/* Bottom Drawer — GPU-accelerated snap transition.
+   Uses a CSS custom property so prefers-reduced-motion is handled in CSS,
+   not JS. The component reads this via style={{ transition: 'var(--drawer-transition)' }}. */
+@media (prefers-reduced-motion: no-preference) {
+  :root { --drawer-transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --drawer-transition: none; }
+}

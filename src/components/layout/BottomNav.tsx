@@ -18,7 +18,7 @@ export default function BottomNav() {
     tab.exact ? pathname === tab.path : pathname.startsWith(tab.path);
 
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-[1200] lg:hidden">
       <div className="max-w-4xl mx-auto grid grid-cols-4 gap-1">
         {tabs.map(tab => {
           const Icon = tab.icon;

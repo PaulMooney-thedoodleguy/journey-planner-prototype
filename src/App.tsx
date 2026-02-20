@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import { JourneyProvider } from './context/JourneyContext';
 import { DeparturesProvider } from './context/DeparturesContext';
 import BottomNav from './components/layout/BottomNav';
+import TopNav from './components/layout/TopNav';
 import UpdatePrompt from './components/layout/UpdatePrompt';
 
 import SearchPage from './pages/home/SearchPage';
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/updates" element={<ServiceUpdatesPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+            <TopNav />
             <BottomNav />
             <UpdatePrompt />
           </DeparturesProvider>

@@ -12,6 +12,12 @@ export function getModeContainerClasses(type: TransportMode): string {
   return `${cfg.bgClass} ${cfg.textClass}`;
 }
 
+/** Returns the raw hex colour for a transport mode, used for inline-style icon containers. */
+export function getModeHex(type: TransportMode): string {
+  const cfg = MODE_CONFIG[type as keyof typeof MODE_CONFIG];
+  return cfg?.hex ?? '#374151';
+}
+
 export function getSeverityColor(sev: Severity): string {
   const map: Record<Severity, string> = {
     critical: 'bg-red-100 text-red-800 border-red-200',

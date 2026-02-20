@@ -17,16 +17,18 @@ export const BRAND_LOGO = {
 } as const;
 
 // ─── Transport mode config ────────────────────────────────────────────────────
-// bgClass   → Tailwind background applied to mode icon containers
-// textClass → Tailwind text colour applied to mode icon containers
+// bgClass   → Tailwind background applied to solid-fill mode icon containers
+// textClass → Tailwind text colour applied to solid-fill mode icon containers
+// hex       → raw hex value (must match tailwind.config.js theme.extend.colors.mode)
+//             used for inline-style icon containers (light bg tint + coloured border)
 // label     → human-readable mode name
 export const MODE_CONFIG = {
-  train:      { bgClass: 'bg-mode-train',      textClass: 'text-white', label: 'Train'        },
-  bus:        { bgClass: 'bg-mode-bus',        textClass: 'text-white', label: 'Bus'          },
-  tram:       { bgClass: 'bg-mode-tram',       textClass: 'text-white', label: 'Tram'         },
-  ferry:      { bgClass: 'bg-mode-ferry',      textClass: 'text-white', label: 'Ferry'        },
-  tube:       { bgClass: 'bg-mode-tube',       textClass: 'text-white', label: 'Underground'  },
-  walk:       { bgClass: 'bg-mode-walk',       textClass: 'text-white', label: 'Walk'         },
-  cycle:      { bgClass: 'bg-mode-cycle',      textClass: 'text-white', label: 'Cycle'        },
-  multimodal: { bgClass: 'bg-mode-multimodal', textClass: 'text-white', label: 'Multi-mode'   },
+  train:      { bgClass: 'bg-mode-train',      textClass: 'text-white', hex: '#003078', label: 'Train'        },
+  bus:        { bgClass: 'bg-mode-bus',        textClass: 'text-white', hex: '#b45309', label: 'Bus'          },
+  tram:       { bgClass: 'bg-mode-tram',       textClass: 'text-white', hex: '#6d28d9', label: 'Tram'         },
+  ferry:      { bgClass: 'bg-mode-ferry',      textClass: 'text-white', hex: '#0e7490', label: 'Ferry'        },
+  tube:       { bgClass: 'bg-mode-tube',       textClass: 'text-white', hex: '#dc2626', label: 'Underground'  },
+  walk:       { bgClass: 'bg-mode-walk',       textClass: 'text-white', hex: '#15803d', label: 'Walk'         },
+  cycle:      { bgClass: 'bg-mode-cycle',      textClass: 'text-white', hex: '#c2410c', label: 'Cycle'        },
+  multimodal: { bgClass: 'bg-mode-multimodal', textClass: 'text-white', hex: '#374151', label: 'Multi-mode'   },
 } as const;

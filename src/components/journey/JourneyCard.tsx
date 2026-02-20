@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Clock, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { Journey, TicketType, Disruption } from '../../types';
-import { getTransportIcon, getModeContainerClasses } from '../../utils/transport';
+import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { formatPrice } from '../../utils/formatting';
 import MultiTicketBreakdown from './MultiTicketBreakdown';
 
@@ -26,109 +26,131 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
     ? 'border-purple-500 bg-purple-50/50'
     : 'border-gray-200 hover:border-brand';
 
+  const co2Class = j.co2 <= 8
+    ? 'bg-green-100 text-green-800'
+    : j.co2 <= 12
+    ? 'bg-yellow-100 text-yellow-800'
+    : 'bg-orange-100 text-orange-800';
+
+  const co2Pct = j.carCo2 && j.carCo2 > j.co2
+    ? Math.round((1 - j.co2 / j.carCo2) * 100)
+    : null;
+
   return (
-    <div className={`border-2 rounded-lg p-4 sm:p-6 hover:shadow-md transition ${borderClass}`}>
-      {/* Badges */}
-      <div className="mb-3 flex flex-wrap gap-2">
-        {isGreenest && (
-          <div className="flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-lg">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="font-semibold text-sm">Greenest</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">Lowest CO₂</span>
-          </div>
-        )}
-        {isFastest && (
-          <div className="flex items-center gap-2 bg-blue-500 text-white px-3 py-1.5 rounded-lg">
-            <Clock className="w-4 h-4 shrink-0" />
-            <span className="font-semibold text-sm">Fastest</span>
-          </div>
-        )}
-        {isCheapest && (
-          <div className="flex items-center gap-2 bg-purple-500 text-white px-3 py-1.5 rounded-lg">
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="font-semibold text-sm">Cheapest</span>
-          </div>
-        )}
+    <div className={`border-2 rounded-xl overflow-hidden transition hover:shadow-md ${borderClass}`}>
+
+      {/* ── Badges ─────────────────────────────────────────────────────── */}
+      {(isGreenest || isFastest || isCheapest) && (
+        <div className="px-4 pt-3 flex flex-wrap gap-2">
+          {isGreenest && (
+            <span className="inline-flex items-center gap-1.5 bg-green-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Greenest
+              <span className="bg-white/25 px-1.5 py-0.5 rounded text-xs">Lowest CO₂</span>
+            </span>
+          )}
+          {isFastest && (
+            <span className="inline-flex items-center gap-1.5 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              Fastest
+            </span>
+          )}
+          {isCheapest && (
+            <span className="inline-flex items-center gap-1.5 bg-purple-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Cheapest
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── Times row ──────────────────────────────────────────────────── */}
+      <div className="px-4 pt-3 flex items-center justify-between gap-2">
+        {/* Departure – Arrival */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-2xl font-bold tabular-nums">{j.departure}</span>
+          <span className="text-gray-400 font-light text-lg">–</span>
+          <span className="text-2xl font-bold tabular-nums">{j.arrival}</span>
+        </div>
+        {/* Duration */}
+        <span className="text-sm font-semibold text-gray-600 shrink-0">{j.duration}</span>
       </div>
 
-      {/* Card body — stacks vertically on mobile, side-by-side on sm+ */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-0">
+      {/* ── Station names ───────────────────────────────────────────────── */}
+      <div className="px-4 pt-0.5 flex items-center justify-between gap-2">
+        <span className="text-xs text-gray-500 truncate">{j.from}</span>
+        <span className="text-xs text-gray-500 shrink-0">
+          {j.changes === 0 ? 'Direct' : `${j.changes} change${j.changes > 1 ? 's' : ''}`}
+        </span>
+        <span className="text-xs text-gray-500 truncate text-right">{j.to}</span>
+      </div>
 
-        {/* Left: operator + journey times */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-3">
-            <div className={`p-2 ${getModeContainerClasses(j.type)} rounded-lg shrink-0`}>{getTransportIcon(j.type)}</div>
-            <div className="min-w-0">
-              <p className="font-semibold text-base sm:text-lg truncate">{j.operator}</p>
-              <p className="text-sm text-gray-500">
-                {j.type === 'train' ? 'Train' : j.type === 'bus' ? 'Coach' : 'Multi-modal'}
-              </p>
-            </div>
-          </div>
+      {/* ── Operator row ────────────────────────────────────────────────── */}
+      <div className="px-4 pt-2.5 pb-3 flex items-center gap-2.5">
+        {/* Map-marker style: light tinted bg + coloured border + coloured icon */}
+        <div
+          style={{
+            backgroundColor: `${getModeHex(j.type)}1a`,
+            border: `2px solid ${getModeHex(j.type)}`,
+            color: getModeHex(j.type),
+          }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+        >
+          {getTransportIcon(j.type, 'w-5 h-5')}
+        </div>
+        <span className="text-sm font-semibold text-gray-800 truncate">{j.operator}</span>
+        <span className="text-xs text-gray-400 shrink-0">
+          {j.type === 'train' ? 'Train' : j.type === 'bus' ? 'Coach' : 'Multi-modal'}
+        </span>
+      </div>
 
-          {/* Times row */}
-          <div className="flex items-center gap-2 sm:gap-6">
-            <div className="shrink-0">
-              <p className="text-xl sm:text-2xl font-bold">{j.departure}</p>
-              <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">{j.from}</p>
-            </div>
-            <div className="flex-1 flex items-center gap-1 sm:gap-2 min-w-0">
-              <div className="h-px bg-gray-300 flex-1" />
-              <div className="text-center shrink-0">
-                <p className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">{j.duration}</p>
-                <p className="text-xs text-gray-500 whitespace-nowrap">
-                  {j.changes === 0 ? 'Direct' : `${j.changes} change${j.changes > 1 ? 's' : ''}`}
-                </p>
-              </div>
-              <div className="h-px bg-gray-300 flex-1" />
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-xl sm:text-2xl font-bold">{j.arrival}</p>
-              <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[80px] sm:max-w-none">{j.to}</p>
-            </div>
-          </div>
+      {/* ── Footer: CO2 + price + Select ───────────────────────────────── */}
+      <div className="px-4 py-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between gap-3">
+
+        {/* CO2 badge + savings */}
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-md text-xs font-semibold ${co2Class}`}>
+            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {j.co2} kg CO₂
+          </span>
+          {co2Pct !== null && (
+            <span className="text-xs text-green-700 font-medium">{co2Pct}% less than driving</span>
+          )}
         </div>
 
-        {/* Right: CO2 + price + button */}
-        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start sm:text-right sm:ml-6 sm:shrink-0 gap-3 sm:gap-0">
-          {/* Price + CO2 group */}
-          <div>
-            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg mb-1 ${j.co2 <= 8 ? 'bg-green-100 text-green-800' : j.co2 <= 12 ? 'bg-yellow-100 text-yellow-800' : 'bg-orange-100 text-orange-800'}`}>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-xs font-semibold">{j.co2} kg CO₂</span>
-            </div>
-            {j.carCo2 && j.carCo2 > j.co2 && (
-              <p className="text-xs text-green-700 font-medium mb-1 sm:mb-2">
-                {Math.round((1 - j.co2 / j.carCo2) * 100)}% less than driving
-              </p>
-            )}
-            <p className="text-xs text-gray-500 mb-0.5 sm:mb-1">{ticketType === 'single' ? 'Single' : 'Return'}</p>
-            <p className="text-2xl sm:text-3xl font-bold text-brand">{formatPrice(j.price[ticketType])}</p>
+        {/* Price + Select */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <p className="text-xs text-gray-400 leading-none mb-0.5">
+              {ticketType === 'single' ? 'Single' : 'Return'}
+            </p>
+            <p className="text-xl font-bold text-brand leading-none">
+              {formatPrice(j.price[ticketType])}
+            </p>
           </div>
-
           <button
             onClick={() => onSelect(j)}
-            className="shrink-0 px-5 py-2 sm:mt-3 bg-brand text-white rounded-lg hover:bg-brand-hover transition flex items-center gap-1.5"
+            className="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-hover transition flex items-center gap-1"
           >
             Select <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Multi-ticket breakdown */}
+      {/* ── Multi-ticket breakdown ──────────────────────────────────────── */}
       {j.requiresMultipleTickets && j.tickets && (
         <MultiTicketBreakdown tickets={j.tickets} />
       )}
 
-      {/* Leg detail toggle — only shown when legs data is available */}
+      {/* ── Leg detail toggle ───────────────────────────────────────────── */}
       {j.legs && j.legs.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="px-4 pb-3 border-t border-gray-100 pt-3">
           <button
             onClick={() => setShowLegs(v => !v)}
             aria-expanded={showLegs}
@@ -152,11 +174,11 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
                   </div>
 
                   {/* Leg info */}
-                  <div className={`flex-1 pb-3 ${i < j.legs!.length - 1 ? '' : ''}`}>
+                  <div className="flex-1 pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="text-sm font-semibold">
-                          {leg.departure} <span className="text-gray-500 font-normal">·</span> {leg.from}
+                          {leg.departure} <span className="text-gray-400 font-normal">·</span> {leg.from}
                         </p>
                         <div className="flex items-center gap-2 my-1 text-xs text-gray-500">
                           <span className="text-brand">{getTransportIcon(leg.mode)}</span>
@@ -168,7 +190,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
                           )}
                         </div>
                         <p className="text-sm font-semibold">
-                          {leg.arrival} <span className="text-gray-500 font-normal">·</span> {leg.to}
+                          {leg.arrival} <span className="text-gray-400 font-normal">·</span> {leg.to}
                         </p>
                       </div>
                       {leg.platform && (
@@ -185,11 +207,11 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
         </div>
       )}
 
-      {/* Disruption warning — only shown for critical/high severity affecting this journey */}
+      {/* ── Disruption warning ──────────────────────────────────────────── */}
       {disruption && (disruption.severity === 'critical' || disruption.severity === 'high') && (
         <div
           role="alert"
-          className="mt-3 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2.5 flex items-start gap-2"
+          className="mx-4 mb-3 bg-yellow-50 border border-yellow-300 rounded-lg px-3 py-2.5 flex items-start gap-2"
         >
           <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" />
           <div>

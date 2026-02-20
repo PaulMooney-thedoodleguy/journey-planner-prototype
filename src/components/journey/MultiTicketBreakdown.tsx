@@ -3,7 +3,7 @@ import { formatPrice } from '../../utils/formatting';
 
 export default function MultiTicketBreakdown({ tickets }: { tickets: OperatorTicket[] }) {
   return (
-    <div className="border-t pt-4 mt-4">
+    <div className="border-t pt-4 px-4 pb-4">
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
         <div className="flex items-start gap-2">
           <svg className="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

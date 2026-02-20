@@ -11,15 +11,21 @@ Mobile-first UK transport planning app built with React 18, TypeScript, Tailwind
 ## Commands
 
 ```bash
-npm install           # Install dependencies
-npm run dev           # Dev server at http://localhost:5173
-npm run build         # Production build
-npm run preview       # Preview the production build
-npm run typecheck     # TypeScript check (no emit)
-npm run setup:hooks   # Install the pre-commit secret-scanning hook
+npm install              # Install dependencies
+npm run dev              # Dev server at http://localhost:5173
+npm run build            # Production build
+npm run preview          # Preview the production build
+npm run typecheck        # TypeScript check (no emit)
+npm run setup:hooks      # Install the pre-commit secret-scanning hook
+
+npm test                 # Vitest unit/component tests (66 tests)
+npm run test:watch       # Vitest in watch mode
+npm run test:coverage    # Vitest with coverage report
+npm run test:e2e         # Playwright E2E: skip-link + page titles + axe audit (requires dev server)
+npm run test:e2e:ui      # Playwright UI mode
 ```
 
-A Vitest unit/component suite and Playwright E2E suite were added in the QA sprint (see `vitest.config.ts` and `playwright.config.ts`). Verify changes with `npm run typecheck` and `npm run build`.
+Verify changes with `npm run typecheck` and `npm run build` before committing.
 
 ---
 
@@ -30,10 +36,13 @@ A Vitest unit/component suite and Playwright E2E suite were added in the QA spri
 | UI | React 18, TypeScript |
 | Styling | Tailwind CSS v3 |
 | Routing | React Router v7 |
-| Icons | Lucide React |
+| Icons | Lucide React + custom SVG mode icons (`vite-plugin-svgr`) |
 | Maps | react-leaflet v4 + Leaflet v1 (OpenStreetMap tiles) |
-| Build | Vite 6 |
+| Build | Vite 6 + vite-plugin-svgr |
 | Data | Mock services (swap via `VITE_USE_MOCK_DATA=false`) |
+| Unit tests | Vitest + Testing Library |
+| E2E tests | Playwright + axe-core |
+| CI | GitHub Actions (typecheck → unit → build → e2e → Lighthouse) |
 
 ---
 
@@ -43,8 +52,15 @@ A Vitest unit/component suite and Playwright E2E suite were added in the QA spri
 src/
 ├── App.tsx                        # BrowserRouter + context provider tree + route definitions
 ├── main.tsx                       # React entry point
-├── index.css                      # Global styles (Tailwind directives)
-├── vite-env.d.ts                  # Vite env type declarations
+├── index.css                      # Global styles (Tailwind directives + focus-visible rules)
+├── vite-env.d.ts                  # Vite env + vite-plugin-svgr type declarations
+├── config/
+│   └── brand.ts                   # Central branding config (app name, logo type, mode colours)
+├── assets/
+│   └── icons/
+│       ├── brand/
+│       │   └── logo.svg           # Swappable brand logo (placeholder wordmark)
+│       └── modes/                 # Transport mode SVGs (train/bus/tram/ferry/tube/walk/cycle/multimodal)
 ├── types/
 │   └── index.ts                   # ALL shared TypeScript types (single source of truth)
 ├── context/
@@ -59,6 +75,7 @@ src/
 │   └── NotFoundPage.tsx           # Catch-all 404 route
 ├── components/
 │   ├── layout/                    # PageShell (page wrapper), BottomNav (fixed nav bar)
+│   ├── icons/                     # ModeIcon.tsx, BrandLogo.tsx
 │   ├── journey/                   # JourneyCard, MultiTicketBreakdown
 │   ├── map/                       # MapView (react-leaflet), MapStub (no-op placeholder)
 │   ├── tickets/                   # AnimatedTicketView, QRCodeView
@@ -69,7 +86,13 @@ src/
 ├── data/                          # Static mock datasets (stations, journeys, departures, disruptions)
 └── utils/
     ├── formatting.ts              # formatDate, formatPrice, generateReference
-    └── transport.tsx              # getTransportIcon, getSeverityColor/Badge, getDurationMins, getDirectionRotation
+    └── transport.tsx              # getTransportIcon, getModeContainerClasses, getSeverityColor/Badge, getDurationMins, getDirectionRotation
+
+src/__tests__/                     # Vitest unit/component tests (mirrors src/ structure)
+e2e/                               # Playwright E2E specs (skip-link, page-titles, accessibility)
+.github/workflows/ci.yml           # CI pipeline (quality → e2e → lighthouse)
+lighthouserc.cjs                   # Lighthouse CI config (accessibility < 0.9 = hard fail)
+public/_headers                    # Netlify security/CSP headers (copied to dist/ by Vite)
 ```
 
 ---
@@ -156,6 +179,7 @@ Copy `.env.example` to `.env` before running locally.
 - **Strict mode**: off (`"strict": false`)
 - `noUnusedLocals` and `noUnusedParameters` are both off
 - All shared types live in `src/types/index.ts` — add new types there, not scattered across files
+- `TransportMode` union: `'train' | 'bus' | 'tube' | 'tram' | 'ferry' | 'walk' | 'cycle' | 'multimodal'`
 
 Run `npm run typecheck` to validate — it runs `tsc --noEmit`.
 
@@ -169,6 +193,8 @@ Run `npm run typecheck` to validate — it runs `tsc --noEmit`.
 - All pages are wrapped in `<PageShell>` — use `fullHeight` for map-heavy pages, `centered` for standalone content
 - Inline `<style>` tags are acceptable within components for keyframe animations (see `SearchPage.tsx`)
 - Always respect `prefers-reduced-motion`: set `animation-duration: 0.01ms !important` inside a `@media (prefers-reduced-motion: reduce)` block when adding CSS animations
+- **Per-mode icon colours**: use `getModeContainerClasses(mode)` from `src/utils/transport.tsx` — returns `bg-mode-{mode} text-white` for each transport mode (e.g. navy for train, amber for bus). Do not use raw `bg-brand-light text-brand` on mode icon containers.
+- **Tailwind safelist**: `bg-mode-*` classes are safelisted in `tailwind.config.js` because they are generated dynamically from `MODE_CONFIG` — do not remove the safelist
 
 ---
 
@@ -188,6 +214,29 @@ The form overlay wrapper uses `pointer-events-none` so the `BottomNav` remains c
 
 ---
 
+## Branding Configuration
+
+All brand decisions live in **`src/config/brand.ts`** — the single source of truth.
+
+```ts
+BRAND_META   // appName, tagline
+BRAND_LOGO   // type: 'text' | 'svg' | 'image', src, alt, width, height
+MODE_CONFIG  // per-mode bgClass, textClass, label
+```
+
+**Swapping the logo**: change `BRAND_LOGO.type`:
+- `'text'` (default) — renders the current Train icon + text (no file change needed)
+- `'svg'` — renders `src/assets/icons/brand/logo.svg` as a React component via svgr
+- `'image'` — renders an `<img>` using `BRAND_LOGO.src`
+
+**`BrandLogo`** (`src/components/icons/BrandLogo.tsx`) reads `BRAND_LOGO` and renders the correct variant. Used in `TopNav.tsx`.
+
+**`ModeIcon`** (`src/components/icons/ModeIcon.tsx`) renders the SVG for a given `TransportMode`. All mode SVGs are in `src/assets/icons/modes/` — 24×24 viewBox, `stroke="currentColor"`, no fixed size attributes.
+
+**SVG imports**: mode icons use `?react` query (via `vite-plugin-svgr`). The type reference is in `src/vite-env.d.ts`. `svgr()` must be present in **both** `vite.config.ts` and `vitest.config.ts` (they are separate plugin pipelines).
+
+---
+
 ## Key Utilities
 
 ### `src/utils/formatting.ts`
@@ -204,12 +253,44 @@ generateReference(): string           // Returns "UKXXXXXX" booking ref
 ### `src/utils/transport.tsx`
 
 ```ts
-getTransportIcon(type: TransportMode): JSX.Element
+getTransportIcon(type: TransportMode, className?): JSX.Element
+// Returns <ModeIcon> for the given mode (uses custom SVGs, not Lucide)
+
+getModeContainerClasses(type: TransportMode): string
+// Returns Tailwind bg+text classes for the mode icon container pill
+// e.g. "bg-mode-train text-white" — falls back to "bg-brand-light text-brand"
+
 getSeverityColor(sev: Severity): string   // Tailwind class string for container
 getSeverityBadge(sev: Severity): string   // Tailwind class string for dot/badge
 getDirectionRotation(dir: string): number // Degrees for compass directions
 getDurationMins(duration: string): number // Parses "1h 30m" → 90
 ```
+
+---
+
+## CI / CD & Quality Gates
+
+GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push/PR to `master`:
+
+| Job | Depends on | Steps |
+|---|---|---|
+| `quality` | — | typecheck → `npm test` (66 unit tests) → `npm run build` → upload dist artefact |
+| `e2e` | quality | install Playwright → `npm run test:e2e` (skip-link + page titles + axe audit) |
+| `lighthouse` | quality | download dist artefact → `npx @lhci/cli autorun` |
+
+**Lighthouse thresholds** (`lighthouserc.cjs`):
+- Accessibility `< 0.9` → **hard failure** (blocks PR)
+- Performance `< 0.7` → warning only
+- Best practices `< 0.8` → warning only
+- SEO `< 0.7` → warning only
+
+**Axe accessibility audit** (`e2e/accessibility.spec.ts`): runs WCAG 2.2 AA checks against `/`, `/tickets`, `/departures`, `/updates`. Leaflet map container is excluded (third-party HTML). Zero violations required.
+
+**Security headers** (`public/_headers`): Netlify format, copied to `dist/` by Vite. Key decisions:
+- `style-src 'unsafe-inline'` — required by Leaflet inline styles; tighten with nonces if SSR is added
+- `img-src *.tile.openstreetmap.org` — react-leaflet OSM tile images
+- `worker-src blob:` — Workbox service worker runtime caching
+- For Vercel: translate to the `headers` array in `vercel.json`
 
 ---
 
@@ -242,6 +323,13 @@ If a false positive occurs, adjust the `SECRET_PATTERNS` regex in `scripts/pre-c
 2. Implement it in the mock class under `src/services/mock/`
 3. Mark a `// TODO:` for the real implementation
 
+### New transport mode
+1. Add to `TransportMode` union in `src/types/index.ts`
+2. Add entry to `MODE_CONFIG` in `src/config/brand.ts` (bgClass, textClass, label)
+3. Add colour token to `tailwind.config.js` under `theme.extend.colors.mode` and to the `safelist`
+4. Add SVG icon to `src/assets/icons/modes/<mode>.svg` (24×24, `currentColor`)
+5. Import and register in `ModeIcon.tsx`
+
 ### New shared type
 - Add to `src/types/index.ts` only
 
@@ -256,3 +344,5 @@ If a false positive occurs, adjust the `SECRET_PATTERNS` regex in `scripts/pre-c
 - Real TfL / National Rail API integrations are not implemented (all services are mocked)
 - Google Maps integration is wired up in `MapViewProps` but the active implementation uses react-leaflet with OpenStreetMap tiles
 - PWA service worker is only active in production builds (`devOptions.enabled: false`); test offline behaviour with `npm run build && npm run preview`
+- Lighthouse CI uploads reports to `temporary-public-storage` (no account needed, reports expire); switch to a self-hosted LHCI server for persistent score history
+- `style-src 'unsafe-inline'` in the CSP is required by Leaflet — if SSR is ever added, replace with a nonce-based approach

@@ -178,9 +178,17 @@ describe('StationAutocomplete — ARIA', () => {
     expect(screen.getByPlaceholderText('Search stations')).toHaveAttribute('aria-autocomplete', 'list');
   });
 
-  it('input has aria-controls pointing to the listbox id', () => {
+  it('input has aria-controls pointing to the listbox id only when the dropdown is open', async () => {
+    const user = userEvent.setup();
     render(<Wrapper />);
     const input = screen.getByPlaceholderText('Search stations');
+
+    // Closed state: aria-controls must be absent so axe never sees a
+    // dangling reference to a listbox that isn't in the DOM.
+    expect(input).not.toHaveAttribute('aria-controls');
+
+    // Open state: aria-controls must be present and reference the listbox.
+    await user.type(input, 'Lo');
     const controlsId = input.getAttribute('aria-controls');
     expect(controlsId).toBeTruthy();
     expect(controlsId).toContain('listbox');

@@ -15,14 +15,14 @@
  *   ✓ hasError applies border-red-500 and aria-invalid to input
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import StationAutocomplete from '../components/journey/StationAutocomplete';
 
 // Stateful wrapper so the controlled input actually updates on type
-function Wrapper({ initialValue = '', onChangeSpy = vi.fn() }: { initialValue?: string; onChangeSpy?: ReturnType<typeof vi.fn> }) {
+function Wrapper({ initialValue = '', onChangeSpy = vi.fn() }: { initialValue?: string; onChangeSpy?: Mock }) {
   const [value, setValue] = useState(initialValue);
   return (
     <StationAutocomplete

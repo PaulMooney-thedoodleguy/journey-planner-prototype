@@ -1,9 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import svgr from 'vite-plugin-svgr';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [svgr(), react()],
   test: {
     environment: 'jsdom',
     globals: true,                         // exposes expect/describe/it/vi globally (needed by jest-dom)

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Wallet, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
-import { getTransportIcon } from '../../utils/transport';
+import { getTransportIcon, getModeContainerClasses } from '../../utils/transport';
 import { formatDate } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { PurchasedTicket } from '../../types';
@@ -123,7 +123,7 @@ export default function TicketWalletPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="p-2 bg-brand-light rounded-lg">{getTransportIcon(t.journey.type)}</div>
+                          <div className={`p-2 ${getModeContainerClasses(t.journey.type)} rounded-lg`}>{getTransportIcon(t.journey.type)}</div>
                           <div>
                             <p className="font-semibold text-lg">{t.journey.operator}</p>
                             <p className="text-sm text-gray-500">Ref: {t.reference}</p>

@@ -1,4 +1,4 @@
-export type TransportMode = 'train' | 'bus' | 'tube' | 'multimodal';
+export type TransportMode = 'train' | 'bus' | 'tube' | 'tram' | 'ferry' | 'walk' | 'cycle' | 'multimodal';
 export type Severity = 'critical' | 'high' | 'medium' | 'low';
 export type TicketType = 'single' | 'return';
 export type PassengerType = 'adult' | 'child' | 'railcard';

@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Train, Navigation, Clock, Wallet, AlertTriangle } from 'lucide-react';
+import { Navigation, Clock, Wallet, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import BrandLogo from '../icons/BrandLogo';
+import { BRAND_META } from '../../config/brand';
 
 const tabs = [
   { path: '/',           label: 'Planner',    icon: Navigation,    exact: true  },
@@ -31,15 +33,10 @@ export default function TopNav() {
       {/* ── Brand logo ──────────────────────────────────────────────────── */}
       <button
         onClick={() => navigate('/')}
-        aria-label="Journey Planner home"
+        aria-label={`${BRAND_META.appName} home`}
         className="flex items-center gap-2.5 mr-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand rounded-lg"
       >
-        <div className="bg-white/15 rounded-lg p-1.5">
-          <Train className="w-6 h-6 text-white" aria-hidden="true" />
-        </div>
-        <span className="text-white font-bold text-lg tracking-tight leading-none">
-          Journey<span className="font-light"> Planner</span>
-        </span>
+        <BrandLogo />
       </button>
 
       {/* ── Nav links ───────────────────────────────────────────────────── */}

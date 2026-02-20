@@ -1,17 +1,15 @@
-import { Train, Bus, Navigation } from 'lucide-react';
+import ModeIcon from '../components/icons/ModeIcon';
+import { MODE_CONFIG } from '../config/brand';
 import type { TransportMode, Severity } from '../types';
 
-export function getTransportIcon(type: TransportMode) {
-  if (type === 'train') return <Train className="w-5 h-5" />;
-  if (type === 'bus') return <Bus className="w-5 h-5" />;
-  if (type === 'tube') return <Navigation className="w-5 h-5" />;
-  if (type === 'multimodal') return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-    </svg>
-  );
-  return <Navigation className="w-5 h-5" />;
+export function getTransportIcon(type: TransportMode, className = 'w-5 h-5') {
+  return <ModeIcon mode={type} className={className} />;
+}
+
+export function getModeContainerClasses(type: TransportMode): string {
+  const cfg = MODE_CONFIG[type as keyof typeof MODE_CONFIG];
+  if (!cfg) return 'bg-brand-light text-brand';
+  return `${cfg.bgClass} ${cfg.textClass}`;
 }
 
 export function getSeverityColor(sev: Severity): string {

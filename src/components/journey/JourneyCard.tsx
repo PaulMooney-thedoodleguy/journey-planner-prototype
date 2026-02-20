@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Clock, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
 import type { Journey, TicketType, Disruption } from '../../types';
-import { getTransportIcon } from '../../utils/transport';
+import { getTransportIcon, getModeContainerClasses } from '../../utils/transport';
 import { formatPrice } from '../../utils/formatting';
 import MultiTicketBreakdown from './MultiTicketBreakdown';
 
@@ -61,7 +61,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
         {/* Left: operator + journey times */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-brand-light rounded-lg text-brand shrink-0">{getTransportIcon(j.type)}</div>
+            <div className={`p-2 ${getModeContainerClasses(j.type)} rounded-lg shrink-0`}>{getTransportIcon(j.type)}</div>
             <div className="min-w-0">
               <p className="font-semibold text-base sm:text-lg truncate">{j.operator}</p>
               <p className="text-sm text-gray-500">

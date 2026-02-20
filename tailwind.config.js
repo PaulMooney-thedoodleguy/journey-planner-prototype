@@ -23,11 +23,25 @@ export default {
           secondary: '#636469',
           disabled:  '#9e9e9e',
         },
+        mode: {
+          train:      '#003078',
+          bus:        '#b45309',
+          tram:       '#6d28d9',
+          ferry:      '#0e7490',
+          tube:       '#dc2626',
+          walk:       '#15803d',
+          cycle:      '#c2410c',
+          multimodal: '#374151',
+        },
       },
       fontFamily: {
         sans: ['"Source Sans Pro"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
     },
   },
+  safelist: [
+    'bg-mode-train', 'bg-mode-bus', 'bg-mode-tram', 'bg-mode-ferry',
+    'bg-mode-tube', 'bg-mode-walk', 'bg-mode-cycle', 'bg-mode-multimodal',
+  ],
   plugins: [],
 }

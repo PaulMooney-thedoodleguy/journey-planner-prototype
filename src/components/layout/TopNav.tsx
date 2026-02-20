@@ -53,8 +53,8 @@ export default function TopNav() {
                 relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-brand
                 ${active
-                  ? 'bg-white/20 text-white'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'}
+                  ? 'bg-brand-hover text-white'
+                  : 'text-white hover:bg-white/10'}
               `}
             >
               <Icon className="w-4 h-4" aria-hidden="true" />

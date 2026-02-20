@@ -84,7 +84,7 @@ export default function StationAutocomplete({
         role="combobox"
         aria-expanded={shouldShowDropdown}
         aria-haspopup="listbox"
-        aria-owns={listboxId}
+        aria-owns={shouldShowDropdown ? listboxId : undefined}
       >
         <input
           ref={inputRef}
@@ -98,7 +98,7 @@ export default function StationAutocomplete({
           placeholder={placeholder}
           autoComplete="off"
           aria-autocomplete="list"
-          aria-controls={listboxId}
+          aria-controls={shouldShowDropdown ? listboxId : undefined}
           aria-activedescendant={highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined}
           aria-describedby={errorId}
           aria-invalid={hasError || undefined}

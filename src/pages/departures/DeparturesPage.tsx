@@ -301,7 +301,7 @@ export default function DeparturesPage() {
                     role="combobox"
                     aria-expanded={isSearchDropdownVisible}
                     aria-haspopup="listbox"
-                    aria-owns="station-search-listbox"
+                    aria-owns={isSearchDropdownVisible ? "station-search-listbox" : undefined}
                   >
                     <div className="relative">
                       <Search
@@ -320,7 +320,7 @@ export default function DeparturesPage() {
                         placeholder="Search stations…"
                         autoComplete="off"
                         aria-autocomplete="list"
-                        aria-controls="station-search-listbox"
+                        aria-controls={isSearchDropdownVisible ? "station-search-listbox" : undefined}
                         aria-activedescendant={
                           searchHighlightedIndex >= 0
                             ? `station-search-option-${searchHighlightedIndex}`
@@ -398,7 +398,7 @@ export default function DeparturesPage() {
                                 {station.type}{station.distance ? ` • ${station.distance}` : ''}
                               </p>
                               {hasLive && (
-                                <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+                                <span className="flex items-center gap-1 text-xs text-green-800 font-semibold">
                                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
                                   Live tracking
                                 </span>
@@ -524,7 +524,7 @@ export default function DeparturesPage() {
                             {dep.status}
                           </span>
                           {dep.hasLiveTracking && (
-                            <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
+                            <span className="flex items-center gap-1 text-xs text-green-800 font-semibold">
                               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
                               LIVE
                             </span>

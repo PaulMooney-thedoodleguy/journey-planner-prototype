@@ -36,9 +36,9 @@ Verify changes with `npm run typecheck` and `npm run build` before committing.
 | UI | React 18, TypeScript |
 | Styling | Tailwind CSS v3 |
 | Routing | React Router v7 |
-| Icons | Lucide React + custom SVG mode icons (`vite-plugin-svgr`) |
+| Icons | Lucide React (UI) + react-icons/md Material Design (transport modes) |
 | Maps | react-leaflet v4 + Leaflet v1 (OpenStreetMap tiles) |
-| Build | Vite 6 + vite-plugin-svgr |
+| Build | Vite 6 + vite-plugin-svgr (brand logo only) |
 | Data | Mock services (swap via `VITE_USE_MOCK_DATA=false`) |
 | Unit tests | Vitest + Testing Library |
 | E2E tests | Playwright + axe-core |
@@ -60,7 +60,7 @@ src/
 │   └── icons/
 │       ├── brand/
 │       │   └── logo.svg           # Swappable brand logo (placeholder wordmark)
-│       └── modes/                 # Transport mode SVGs (train/bus/tram/ferry/tube/walk/cycle/multimodal)
+│       └── modes/                 # Legacy SVG files (unused — mode icons now come from react-icons/md)
 ├── types/
 │   └── index.ts                   # ALL shared TypeScript types (single source of truth)
 ├── context/
@@ -86,7 +86,7 @@ src/
 ├── data/                          # Static mock datasets (stations, journeys, departures, disruptions)
 └── utils/
     ├── formatting.ts              # formatDate, formatPrice, generateReference
-    └── transport.tsx              # getTransportIcon, getModeContainerClasses, getSeverityColor/Badge, getDurationMins, getDirectionRotation
+    └── transport.tsx              # getTransportIcon, getModeHex, getSeverityColor/Badge, getDurationMins, getDirectionRotation
 
 src/__tests__/                     # Vitest unit/component tests (mirrors src/ structure)
 e2e/                               # Playwright E2E specs (skip-link, page-titles, accessibility)
@@ -193,8 +193,13 @@ Run `npm run typecheck` to validate — it runs `tsc --noEmit`.
 - All pages are wrapped in `<PageShell>` — use `fullHeight` for map-heavy pages, `centered` for standalone content
 - Inline `<style>` tags are acceptable within components for keyframe animations (see `SearchPage.tsx`)
 - Always respect `prefers-reduced-motion`: set `animation-duration: 0.01ms !important` inside a `@media (prefers-reduced-motion: reduce)` block when adding CSS animations
-- **Per-mode icon colours**: use `getModeContainerClasses(mode)` from `src/utils/transport.tsx` — returns `bg-mode-{mode} text-white` for each transport mode (e.g. navy for train, amber for bus). Do not use raw `bg-brand-light text-brand` on mode icon containers.
-- **Tailwind safelist**: `bg-mode-*` classes are safelisted in `tailwind.config.js` because they are generated dynamically from `MODE_CONFIG` — do not remove the safelist
+- **Mode icon containers**: always use inline styles with `getModeHex(mode)` from `src/utils/transport.tsx`. The standard pattern is:
+  ```tsx
+  style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(mode)}`, color: getModeHex(mode) }}
+  className="rounded-lg flex items-center justify-center"
+  ```
+  This white-background + coloured-border + coloured-icon style is used consistently in journey cards, leg detail rows, departure lists, ticket wallet, and map markers. Do **not** use `bg-brand-light text-brand` or `getModeContainerClasses` on mode icon containers.
+- **Tailwind safelist**: `bg-mode-*` classes are safelisted in `tailwind.config.js` — these are kept for potential future use but no longer applied to icon containers
 
 ---
 
@@ -221,8 +226,10 @@ All brand decisions live in **`src/config/brand.ts`** — the single source of t
 ```ts
 BRAND_META   // appName, tagline
 BRAND_LOGO   // type: 'text' | 'svg' | 'image', src, alt, width, height
-MODE_CONFIG  // per-mode bgClass, textClass, label
+MODE_CONFIG  // per-mode bgClass, textClass, hex, label
 ```
+
+**`MODE_CONFIG.hex`** is the canonical colour for each transport mode. Always retrieve it via `getModeHex(mode)` from `src/utils/transport.tsx` rather than accessing `MODE_CONFIG` directly in components.
 
 **Swapping the logo**: change `BRAND_LOGO.type`:
 - `'text'` (default) — renders the current Train icon + text (no file change needed)
@@ -231,9 +238,20 @@ MODE_CONFIG  // per-mode bgClass, textClass, label
 
 **`BrandLogo`** (`src/components/icons/BrandLogo.tsx`) reads `BRAND_LOGO` and renders the correct variant. Used in `TopNav.tsx`.
 
-**`ModeIcon`** (`src/components/icons/ModeIcon.tsx`) renders the SVG for a given `TransportMode`. All mode SVGs are in `src/assets/icons/modes/` — 24×24 viewBox, `stroke="currentColor"`, no fixed size attributes.
+**`ModeIcon`** (`src/components/icons/ModeIcon.tsx`) — renders a Google Material Design icon for a given `TransportMode` using `react-icons/md`. The exported `ICONS` map is the single definition of which icon represents each mode:
 
-**SVG imports**: mode icons use `?react` query (via `vite-plugin-svgr`). The type reference is in `src/vite-env.d.ts`. `svgr()` must be present in **both** `vite.config.ts` and `vitest.config.ts` (they are separate plugin pipelines).
+```ts
+// ModeIcon.tsx
+export const ICONS: Record<string, IconType> = {
+  train: MdTrain, bus: MdDirectionsBus, tram: MdTram, ferry: MdDirectionsBoat,
+  tube: MdDirectionsSubway, walk: MdDirectionsWalk, cycle: MdDirectionsBike,
+  multimodal: MdSyncAlt,
+};
+```
+
+**Map markers** (`MapView.tsx`) reuse the same `ICONS` map via `renderToStaticMarkup(createElement(Icon, { size, color }))` to generate HTML strings for Leaflet `divIcon`. This means changing an icon in `ModeIcon.tsx` automatically updates both card icons and map pins.
+
+**SVG imports** (`vite-plugin-svgr`): only used for `src/assets/icons/brand/logo.svg?react` in `BrandLogo.tsx`. The `src/assets/icons/modes/` SVG files are legacy and no longer imported. `svgr()` must be present in **both** `vite.config.ts` and `vitest.config.ts`.
 
 ---
 
@@ -254,17 +272,19 @@ generateReference(): string           // Returns "UKXXXXXX" booking ref
 
 ```ts
 getTransportIcon(type: TransportMode, className?): JSX.Element
-// Returns <ModeIcon> for the given mode (uses custom SVGs, not Lucide)
+// Returns <ModeIcon> for the given mode — Google Material Design icon via react-icons/md
 
-getModeContainerClasses(type: TransportMode): string
-// Returns Tailwind bg+text classes for the mode icon container pill
-// e.g. "bg-mode-train text-white" — falls back to "bg-brand-light text-brand"
+getModeHex(type: TransportMode): string
+// Returns raw hex colour for a mode from MODE_CONFIG (e.g. '#003078' for train)
+// Use this to build inline-style icon containers (white bg + coloured border + coloured icon)
 
 getSeverityColor(sev: Severity): string   // Tailwind class string for container
 getSeverityBadge(sev: Severity): string   // Tailwind class string for dot/badge
 getDirectionRotation(dir: string): number // Degrees for compass directions
 getDurationMins(duration: string): number // Parses "1h 30m" → 90
 ```
+
+> `getModeContainerClasses` still exists in the file but is no longer used — all icon containers use `getModeHex` + inline styles.
 
 ---
 
@@ -285,6 +305,8 @@ GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push/PR to `m
 - SEO `< 0.7` → warning only
 
 **Axe accessibility audit** (`e2e/accessibility.spec.ts`): runs WCAG 2.2 AA checks against `/`, `/tickets`, `/departures`, `/updates`. Leaflet map container is excluded (third-party HTML). Zero violations required.
+
+**ARIA `aria-controls` pattern**: never set `aria-controls` to reference an element that isn't currently in the DOM — axe flags this as a critical `aria-valid-attr-value` violation. For combobox/listbox patterns, make `aria-controls` conditional: `aria-controls={isOpen ? listboxId : undefined}`. The matching `aria-owns` on the combobox wrapper must follow the same condition.
 
 **Security headers** (`public/_headers`): Netlify format, copied to `dist/` by Vite. Key decisions:
 - `style-src 'unsafe-inline'` — required by Leaflet inline styles; tighten with nonces if SSR is added
@@ -325,10 +347,11 @@ If a false positive occurs, adjust the `SECRET_PATTERNS` regex in `scripts/pre-c
 
 ### New transport mode
 1. Add to `TransportMode` union in `src/types/index.ts`
-2. Add entry to `MODE_CONFIG` in `src/config/brand.ts` (bgClass, textClass, label)
+2. Add entry to `MODE_CONFIG` in `src/config/brand.ts` — include `bgClass`, `textClass`, `hex`, `label`
 3. Add colour token to `tailwind.config.js` under `theme.extend.colors.mode` and to the `safelist`
-4. Add SVG icon to `src/assets/icons/modes/<mode>.svg` (24×24, `currentColor`)
-5. Import and register in `ModeIcon.tsx`
+4. Import the relevant `react-icons/md` icon and add it to the `ICONS` map in `ModeIcon.tsx`
+
+No SVG file is needed — icons come from `react-icons/md`.
 
 ### New shared type
 - Add to `src/types/index.ts` only

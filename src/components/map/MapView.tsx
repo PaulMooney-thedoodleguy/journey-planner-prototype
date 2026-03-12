@@ -17,13 +17,23 @@ function FitBounds({ points }: { points: [number, number][] }) {
   return null;
 }
 
+/** Re-centres the map when center or zoom changes after initial mount. */
+function SetView({ center, zoom }: { center: [number, number]; zoom: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom, { animate: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, center[0], center[1], zoom]);
+  return null;
+}
+
 /**
  * Leaflet DivIcon for a station marker.
  * Uses the same react-icons/md components as ModeIcon — single source of truth.
  * White bg + coloured border matches the card icon container style.
  */
-function stationIcon(type: TransportMode) {
-  const hex = getModeHex(type);
+function stationIcon(type: TransportMode, colorOverride?: string) {
+  const hex = colorOverride ?? getModeHex(type);
   const Icon = ICONS[type] ?? ICONS['train'];
   const svg = renderToStaticMarkup(createElement(Icon, { size: 20, color: hex }));
 
@@ -99,7 +109,7 @@ export default function MapView({
           <Marker
             key={m.id}
             position={[m.lat, m.lng]}
-            icon={stationIcon(m.type)}
+            icon={stationIcon(m.type, m.color)}
             eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
           >
             {m.label && (
@@ -109,7 +119,7 @@ export default function MapView({
             )}
           </Marker>
         ))}
-        {routePolyline.length >= 2 && (
+        {routePolyline.length >= 2 ? (
           <>
             <FitBounds points={routePolyline.map(p => [p.lat, p.lng] as [number, number])} />
             <Polyline
@@ -117,6 +127,8 @@ export default function MapView({
               pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.85 }}
             />
           </>
+        ) : (
+          <SetView center={mapCenter} zoom={zoom ?? 13} />
         )}
       </MapContainer>
 

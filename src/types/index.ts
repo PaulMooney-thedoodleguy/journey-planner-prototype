@@ -132,6 +132,9 @@ export interface Disruption {
   description: string;
   operator: string;
   updated: string;
+  lat?: number;
+  lng?: number;
+  mode?: TransportMode;
 }
 
 // ─── Map (shared contract for stub and real Google Maps) ─────
@@ -142,6 +145,7 @@ export interface MapMarker {
   lng: number;
   type: TransportMode;
   label?: string;
+  color?: string;
 }
 
 export interface MapViewProps {

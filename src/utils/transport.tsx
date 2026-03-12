@@ -39,6 +39,17 @@ export function getSeverityBadge(sev: Severity): string {
   return map[sev] ?? 'bg-gray-500';
 }
 
+/** Returns a hex colour for a severity level — use for inline styles and map markers. */
+export function getSeverityHex(sev: Severity): string {
+  const map: Record<Severity, string> = {
+    critical: '#ef4444',
+    high:     '#f97316',
+    medium:   '#eab308',
+    low:      '#3b82f6',
+  };
+  return map[sev] ?? '#6b7280';
+}
+
 export function getDirectionRotation(dir: string): number {
   const dirs: Record<string, number> = {
     north: 0, northeast: 45, east: 90, southeast: 135,

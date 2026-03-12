@@ -6,7 +6,7 @@ import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
 import { getSeverityColor, getSeverityBadge, getSeverityHex } from '../../utils/transport';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { Disruption, MapMarker, Severity } from '../../types';
+import type { Disruption, MapMarker, MapPolyline, MapCircle, Severity } from '../../types';
 
 const SEVERITIES: Array<'all' | Severity> = ['all', 'critical', 'high', 'medium', 'low'];
 
@@ -44,8 +44,8 @@ export default function ServiceUpdatesPage() {
     : DEFAULT_CENTER;
   const mapZoom = selectedDisruption ? SELECTED_ZOOM : DEFAULT_ZOOM;
 
-  // Disruption markers — severity colour overrides the mode icon colour
-  const disruptionMarkers: MapMarker[] = disruptions
+  // All disruption markers (used when nothing is selected)
+  const allDisruptionMarkers: MapMarker[] = disruptions
     .filter(d => d.lat != null && d.lng != null)
     .map(d => ({
       id:    d.id,
@@ -55,6 +55,52 @@ export default function ServiceUpdatesPage() {
       label: d.title,
       color: getSeverityHex(d.severity),
     }));
+
+  // When a disruption is selected, show affected-stop markers + the main pin
+  const activeMarkers: MapMarker[] = selectedDisruption
+    ? [
+        // Affected stop markers (smaller visual, same severity colour)
+        ...(selectedDisruption.affectedStops ?? []).map(s => ({
+          id:    `stop-${selectedDisruption.id}-${s.name}`,
+          lat:   s.lat,
+          lng:   s.lng,
+          type:  selectedDisruption.mode ?? 'train' as const,
+          label: s.name,
+          color: getSeverityHex(selectedDisruption.severity),
+        })),
+        // Keep the main disruption pin too (so it stays visible)
+        ...(selectedDisruption.lat != null ? [{
+          id:    selectedDisruption.id,
+          lat:   selectedDisruption.lat!,
+          lng:   selectedDisruption.lng!,
+          type:  selectedDisruption.mode ?? 'train' as const,
+          label: selectedDisruption.title,
+          color: getSeverityHex(selectedDisruption.severity),
+        }] : []),
+      ]
+    : allDisruptionMarkers;
+
+  // Dashed severity-coloured polyline for the affected route
+  const activePolylines: MapPolyline[] = selectedDisruption?.affectedRoute?.length
+    ? [{
+        id:     `route-${selectedDisruption.id}`,
+        points: selectedDisruption.affectedRoute,
+        color:  getSeverityHex(selectedDisruption.severity),
+        weight: 4,
+        dashed: true,
+      }]
+    : [];
+
+  // Semi-transparent circle for the affected area
+  const activeCircles: MapCircle[] = selectedDisruption?.lat != null && selectedDisruption?.affectedRadius
+    ? [{
+        id:     `area-${selectedDisruption.id}`,
+        lat:    selectedDisruption.lat!,
+        lng:    selectedDisruption.lng!,
+        radius: selectedDisruption.affectedRadius,
+        color:  getSeverityHex(selectedDisruption.severity),
+      }]
+    : [];
 
   const handleCardClick = (id: number) => {
     setSelectedId(prev => (prev === id ? null : id));
@@ -185,12 +231,14 @@ export default function ServiceUpdatesPage() {
           </div>
         </BottomDrawer>
 
-        {/* Map — disruption markers coloured by severity; re-centres on selection */}
+        {/* Map — severity markers + affected route/area overlays on selection */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
-            markers={disruptionMarkers}
-            center={mapCenter}
-            zoom={mapZoom}
+            markers={activeMarkers}
+            center={selectedDisruption ? undefined : mapCenter}
+            zoom={selectedDisruption ? undefined : mapZoom}
+            polylines={activePolylines}
+            circles={activeCircles}
             onMarkerClick={handleMarkerClick}
             height="100%"
           />

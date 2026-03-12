@@ -135,6 +135,9 @@ export interface Disruption {
   lat?: number;
   lng?: number;
   mode?: TransportMode;
+  affectedRoute?: { lat: number; lng: number }[];
+  affectedStops?: { name: string; lat: number; lng: number }[];
+  affectedRadius?: number;
 }
 
 // ─── Map (shared contract for stub and real Google Maps) ─────
@@ -148,11 +151,29 @@ export interface MapMarker {
   color?: string;
 }
 
+export interface MapPolyline {
+  id: string | number;
+  points: { lat: number; lng: number }[];
+  color: string;
+  weight?: number;
+  dashed?: boolean;
+}
+
+export interface MapCircle {
+  id: string | number;
+  lat: number;
+  lng: number;
+  radius: number;
+  color: string;
+}
+
 export interface MapViewProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   markers?: MapMarker[];
   routePolyline?: { lat: number; lng: number }[];
+  polylines?: MapPolyline[];
+  circles?: MapCircle[];
   vehicleMarker?: { lat: number; lng: number; direction?: number };
   onMarkerClick?: (id: string | number) => void;
   height?: string;

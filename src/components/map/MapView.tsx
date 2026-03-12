@@ -1,7 +1,7 @@
 import { useState, createElement, useEffect } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
@@ -11,7 +11,7 @@ import { MODE_CONFIG } from '../../config/brand';
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
   useEffect(() => {
-    if (points.length >= 2) map.fitBounds(points, { padding: [50, 50] });
+    if (points.length >= 2) map.fitBounds(points, { padding: [60, 60] });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, JSON.stringify(points)]);
   return null;
@@ -53,6 +53,8 @@ export default function MapView({
   center,
   zoom,
   routePolyline = [],
+  polylines = [],
+  circles = [],
 }: MapViewProps) {
   const mapCenter: [number, number] = center
     ? [center.lat, center.lng]
@@ -119,6 +121,38 @@ export default function MapView({
             )}
           </Marker>
         ))}
+        {/* Disruption area circles */}
+        {circles.map(c => (
+          <Circle
+            key={c.id}
+            center={[c.lat, c.lng]}
+            radius={c.radius}
+            pathOptions={{
+              color: c.color,
+              fillColor: c.color,
+              fillOpacity: 0.10,
+              weight: 1.5,
+              opacity: 0.4,
+              dashArray: '4 4',
+            }}
+          />
+        ))}
+
+        {/* Disruption / extra overlay polylines */}
+        {polylines.map(pl => (
+          <Polyline
+            key={pl.id}
+            positions={pl.points.map(p => [p.lat, p.lng] as [number, number])}
+            pathOptions={{
+              color: pl.color,
+              weight: pl.weight ?? 4,
+              opacity: 0.75,
+              dashArray: pl.dashed ? '8 6' : undefined,
+            }}
+          />
+        ))}
+
+        {/* Journey route polyline (brand colour, solid) */}
         {routePolyline.length >= 2 ? (
           <>
             <FitBounds points={routePolyline.map(p => [p.lat, p.lng] as [number, number])} />
@@ -127,6 +161,13 @@ export default function MapView({
               pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.85 }}
             />
           </>
+        ) : polylines.length >= 1 ? (
+          // Fit to disruption route when no journey route is active
+          <FitBounds
+            points={polylines.flatMap(pl =>
+              pl.points.map(p => [p.lat, p.lng] as [number, number])
+            )}
+          />
         ) : (
           <SetView center={mapCenter} zoom={zoom ?? 13} />
         )}

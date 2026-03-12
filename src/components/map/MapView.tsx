@@ -118,6 +118,7 @@ export default function MapView({
             key={m.id}
             position={[m.lat, m.lng]}
             icon={stationIcon(m.type, m.color)}
+            title={m.label ?? m.type}
             eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
           >
             {m.label && (

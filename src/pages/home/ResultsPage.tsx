@@ -168,7 +168,7 @@ export default function ResultsPage() {
             <div className="p-4 sm:p-6 pb-8">
               <button
                 onClick={() => navigate('/')}
-                className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2"
+                className="mb-4 py-1 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2"
               >
                 ← Back to Search
               </button>

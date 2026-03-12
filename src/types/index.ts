@@ -15,6 +15,7 @@ export interface JourneyLeg {
   duration: string;
   platform?: string;
   stops?: number;
+  intermediateStops?: string[];
 }
 
 export interface OperatorTicket {

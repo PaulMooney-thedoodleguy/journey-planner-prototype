@@ -1,12 +1,21 @@
-import { useState, createElement } from 'react';
+import { useState, createElement, useEffect } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
 import { getModeHex } from '../../utils/transport';
 import { MODE_CONFIG } from '../../config/brand';
+
+function FitBounds({ points }: { points: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length >= 2) map.fitBounds(points, { padding: [50, 50] });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, JSON.stringify(points)]);
+  return null;
+}
 
 /**
  * Leaflet DivIcon for a station marker.
@@ -33,6 +42,7 @@ export default function MapView({
   height = '100%',
   center,
   zoom,
+  routePolyline = [],
 }: MapViewProps) {
   const mapCenter: [number, number] = center
     ? [center.lat, center.lng]
@@ -99,10 +109,19 @@ export default function MapView({
             )}
           </Marker>
         ))}
+        {routePolyline.length >= 2 && (
+          <>
+            <FitBounds points={routePolyline.map(p => [p.lat, p.lng] as [number, number])} />
+            <Polyline
+              positions={routePolyline.map(p => [p.lat, p.lng] as [number, number])}
+              pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.85 }}
+            />
+          </>
+        )}
       </MapContainer>
 
       {/* ── Mode filter overlay ──────────────────────────────────────────── */}
-      {showFilter && (
+      {showFilter && routePolyline.length === 0 && (
         <div className="absolute top-3 right-3 z-[400] flex flex-col items-end gap-2">
 
           {/* More / Close toggle */}

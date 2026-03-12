@@ -1,6 +1,7 @@
 import ModeIcon from '../components/icons/ModeIcon';
 import { MODE_CONFIG } from '../config/brand';
-import type { TransportMode, Severity } from '../types';
+import { ROUTE_STATION_COORDS } from '../data/stations';
+import type { TransportMode, Severity, JourneyLeg } from '../types';
 
 export function getTransportIcon(type: TransportMode, className = 'w-5 h-5') {
   return <ModeIcon mode={type} className={className} />;
@@ -52,4 +53,22 @@ export function getDurationMins(duration: string): number {
   const hours = parseInt(match[1] ?? '0');
   const mins = parseInt(match[2] ?? '0');
   return hours * 60 + mins;
+}
+
+export function lookupCoords(name: string): { lat: number; lng: number } | null {
+  if (ROUTE_STATION_COORDS[name]) return ROUTE_STATION_COORDS[name];
+  const lower = name.toLowerCase();
+  const key = Object.keys(ROUTE_STATION_COORDS).find(k => k.toLowerCase() === lower);
+  return key ? ROUTE_STATION_COORDS[key] : null;
+}
+
+export function getRoutePolyline(legs: JourneyLeg[]): { lat: number; lng: number }[] {
+  const pts: { lat: number; lng: number }[] = [];
+  for (const leg of legs) {
+    const from = lookupCoords(leg.from);
+    const to   = lookupCoords(leg.to);
+    if (from && (pts.length === 0 || pts[pts.length - 1].lat !== from.lat)) pts.push(from);
+    if (to) pts.push(to);
+  }
+  return pts;
 }

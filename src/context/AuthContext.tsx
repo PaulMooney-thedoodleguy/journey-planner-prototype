@@ -13,12 +13,19 @@ interface AuthContextValue {
   logout: () => void;
   updateProfile: (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'homeStation' | 'defaultRailcard'>>) => void;
   clearAllData: () => void;
+  loginModalOpen: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(loadUser);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+
+  const openLoginModal  = () => setLoginModalOpen(true);
+  const closeLoginModal = () => setLoginModalOpen(false);
 
   function login(email: string, _password: string): string | null {
     const users = loadUsers();
@@ -74,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout, updateProfile, clearAllData }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout, updateProfile, clearAllData, loginModalOpen, openLoginModal, closeLoginModal }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AppProvider } from './context/AppContext';
 import { JourneyProvider } from './context/JourneyContext';
@@ -7,6 +7,7 @@ import BottomNav from './components/layout/BottomNav';
 import TopNav from './components/layout/TopNav';
 import UpdatePrompt from './components/layout/UpdatePrompt';
 import MobileAccountButton from './components/layout/MobileAccountButton';
+import LoginModal from './components/layout/LoginModal';
 
 import SearchPage from './pages/home/SearchPage';
 import ResultsPage from './pages/home/ResultsPage';
@@ -40,7 +41,7 @@ export default function App() {
                 <Route path="/departures/:stationId/track/:serviceKey" element={<DeparturesPage />} />
                 <Route path="/updates" element={<ServiceUpdatesPage />} />
                 <Route path="/journeys/:savedJourneyId" element={<JourneyPlanPage />} />
-                <Route path="/login" element={<LoginPage />} />
+                <Route path="/login" element={<Navigate to="/" replace />} />
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
@@ -48,6 +49,7 @@ export default function App() {
               <BottomNav />
               <MobileAccountButton />
               <UpdatePrompt />
+              <LoginModal />
             </DeparturesProvider>
           </JourneyProvider>
         </AppProvider>

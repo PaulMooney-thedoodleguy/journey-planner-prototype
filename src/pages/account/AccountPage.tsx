@@ -15,7 +15,7 @@ const RAILCARD_OPTIONS: { value: NonNullable<import('../../types').UserProfile['
 
 export default function AccountPage() {
   const navigate = useNavigate();
-  const { user, isLoggedIn, logout, updateProfile, clearAllData } = useAuthContext();
+  const { user, isLoggedIn, logout, updateProfile, clearAllData, openLoginModal } = useAuthContext();
   const { resetAppData } = useAppContext();
   usePageTitle('My Account');
 
@@ -27,10 +27,13 @@ export default function AccountPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Redirect if not logged in
+  // If not logged in, go home and open the login modal
   useEffect(() => {
-    if (!isLoggedIn) navigate('/login', { replace: true });
-  }, [isLoggedIn, navigate]);
+    if (!isLoggedIn) {
+      openLoginModal();
+      navigate('/', { replace: true });
+    }
+  }, [isLoggedIn, navigate, openLoginModal]);
 
   // Populate form from user profile
   useEffect(() => {

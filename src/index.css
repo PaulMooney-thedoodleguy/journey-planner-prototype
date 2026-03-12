@@ -43,3 +43,10 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   :root { --drawer-transition: none; }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  :root { --modal-transition: opacity 0.2s ease-out, transform 0.2s ease-out; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --modal-transition: none; }
+}

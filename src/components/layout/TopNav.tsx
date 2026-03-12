@@ -22,7 +22,7 @@ export default function TopNav() {
   const { pathname } = useLocation();
   const navigate    = useNavigate();
   const { purchasedTickets } = useAppContext();
-  const { user } = useAuthContext();
+  const { user, openLoginModal } = useAuthContext();
 
   const isActive = (tab: typeof tabs[0]) =>
     tab.exact ? pathname === tab.path : pathname.startsWith(tab.path);
@@ -88,7 +88,7 @@ export default function TopNav() {
           </button>
         ) : (
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => openLoginModal()}
             className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
             Sign in

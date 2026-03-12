@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Clock, MapPin, ChevronRight, Search } from 'lucide-react';
 import { useDeparturesContext } from '../../context/DeparturesContext';
 import MapView from '../../components/map/MapView';
@@ -40,7 +40,16 @@ const TRACKING_SNAP_POINTS = [
 
 export default function DeparturesPage() {
   const { stationId, serviceKey } = useParams<{ stationId?: string; serviceKey?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  // Context passed from TicketDetailPage — highlight the relevant departure row
+  // and offer a direct back-link to the originating ticket.
+  const fromTicketId  = searchParams.get('ticketId');
+  const highlightTime = searchParams.get('depTime');
+  const highlightOp   = searchParams.get('depOp')?.toLowerCase() ?? '';
+
+  const highlightedRowRef = useRef<HTMLLIElement>(null);
 
   const {
     nearbyStations,
@@ -60,6 +69,14 @@ export default function DeparturesPage() {
 
   // Track whether we've already hydrated from the URL on first mount.
   const hydratedRef = useRef(false);
+
+  // Scroll the highlighted row into view once the board is rendered.
+  useEffect(() => {
+    if (view === 'board' && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, departures.length]);
 
   // ── Station search state ──────────────────────────────────────────────────
 
@@ -188,7 +205,8 @@ export default function DeparturesPage() {
     setTrackedService(dep);
     const key = encodeURIComponent(`${dep.operator}-${dep.destination}`);
     setView('tracking');
-    navigate(`/departures/${selectedStation.id}/track/${key}`);
+    const qs = fromTicketId ? `?ticketId=${fromTicketId}` : '';
+    navigate(`/departures/${selectedStation.id}/track/${key}${qs}`);
   };
 
   const handleBackToBoard = () => {
@@ -259,11 +277,13 @@ export default function DeparturesPage() {
             <div className="px-4 py-3">
               <div className="flex items-center gap-3">
                 <button
-                  onClick={handleBackToBoard}
+                  onClick={fromTicketId
+                    ? () => navigate(`/tickets/${fromTicketId}`)
+                    : handleBackToBoard}
                   className="shrink-0 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-1 transition-colors"
-                  aria-label="Back to departure board"
+                  aria-label={fromTicketId ? 'Back to ticket' : 'Back to departure board'}
                 >
-                  ← Back
+                  {fromTicketId ? '← Back to Ticket' : '← Back'}
                 </button>
 
                 <div className="w-px h-8 bg-gray-200 shrink-0" aria-hidden="true" />
@@ -423,10 +443,12 @@ export default function DeparturesPage() {
             <>
               <div className="px-4 pt-2 pb-3 border-b border-gray-100">
                 <button
-                  onClick={handleBackToStations}
+                  onClick={fromTicketId
+                    ? () => navigate(`/tickets/${fromTicketId}`)
+                    : handleBackToStations}
                   className="text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-1 mb-3 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-tint rounded"
                 >
-                  ← Back to Stations
+                  {fromTicketId ? '← Back to Ticket' : '← Back to Stations'}
                 </button>
 
                 {selectedStation && (
@@ -476,6 +498,10 @@ export default function DeparturesPage() {
                   </li>
                 ) : (
                   departures.map(dep => {
+                    const isYourService = !!highlightTime &&
+                      dep.time === highlightTime &&
+                      dep.operator.toLowerCase() === highlightOp;
+
                     const rowGrid = (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 items-center">
                         <div className="font-bold text-base">{dep.time}</div>
@@ -487,6 +513,11 @@ export default function DeparturesPage() {
                           <span className="sm:hidden inline-block mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
                             {dep.platform !== null ? `${platformLabel} ${dep.platform}` : 'TBA'}
                           </span>
+                          {isYourService && (
+                            <span className="inline-block mt-1 text-xs font-bold text-brand border border-brand bg-white px-2 py-0.5 rounded-full">
+                              Your service
+                            </span>
+                          )}
                         </div>
 
                         {/* Platform — desktop only */}
@@ -515,7 +546,11 @@ export default function DeparturesPage() {
                     );
 
                     return (
-                      <li key={`${dep.operator}-${dep.destination}-${dep.time}`}>
+                      <li
+                        key={`${dep.operator}-${dep.destination}-${dep.time}`}
+                        ref={isYourService ? highlightedRowRef : undefined}
+                        className={isYourService ? 'border-l-4 border-brand bg-brand-light/60' : undefined}
+                      >
                         {dep.hasLiveTracking ? (
                           <button
                             onClick={() => handleTrackService(dep)}

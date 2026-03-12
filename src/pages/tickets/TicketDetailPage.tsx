@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { QrCode, Eye, Map as MapIcon, AlertTriangle, ArrowRight } from 'lucide-react';
+import { QrCode, Eye, Map as MapIcon, AlertTriangle, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import QRCodeView from '../../components/tickets/QRCodeView';
 import AnimatedTicketView from '../../components/tickets/AnimatedTicketView';
@@ -9,6 +9,7 @@ import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
 import { getRoutePolyline, getModeHex, getSeverityHex, getTransportIcon } from '../../utils/transport';
 import { ROUTE_STATION_COORDS, MAP_STATIONS } from '../../data/stations';
+import { MOCK_DEPARTURES } from '../../data/departures';
 import { getDisruptionsService } from '../../services/transport.service';
 import { formatDate } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -38,6 +39,7 @@ export default function TicketDetailPage() {
   const navigate = useNavigate();
   const { purchasedTickets, savedJourneys } = useAppContext();
   const [ticketView, setTicketView] = useState<'qr' | 'visual'>('qr');
+  const [disruptionOpen, setDisruptionOpen] = useState(false);
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   usePageTitle('My Ticket');
 
@@ -120,6 +122,23 @@ export default function TicketDetailPage() {
 
   const departureStationId = ticket ? findDepartureStationId(ticket.journey.from) : null;
 
+  // Find the best-matching departure for this ticket — operator match preferred,
+  // falling back to the first live-tracking service at the station.
+  const matchedDeparture = useMemo(() => {
+    if (!departureStationId || !ticket) return null;
+    const stationDeps = MOCK_DEPARTURES[departureStationId] ?? [];
+    const ticketOp = ticket.journey.operator.toLowerCase();
+    return (
+      stationDeps.find(d => {
+        const depOp = d.operator.toLowerCase();
+        return ticketOp.includes(depOp) || depOp.includes(ticketOp);
+      }) ??
+      stationDeps.find(d => d.hasLiveTracking) ??
+      stationDeps[0] ??
+      null
+    );
+  }, [departureStationId, ticket]);
+
   if (!ticket) {
     return (
       <PageShell>
@@ -169,49 +188,61 @@ export default function TicketDetailPage() {
               </div>
             </div>
 
-            {/* Disruption alert */}
+            {/* Disruption alert — collapsible */}
             {ticketDisruption && (
-              <div className={`mb-4 flex items-start gap-2.5 p-3 rounded-xl border ${severityClass}`}>
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
-                <div className="text-xs">
-                  <p className="font-semibold">{ticketDisruption.title}</p>
-                  <p className="opacity-75 mt-0.5 leading-relaxed">{ticketDisruption.description}</p>
-                  <button
-                    onClick={() => navigate('/updates')}
-                    className="mt-1.5 font-semibold underline underline-offset-2"
-                  >
-                    View service updates →
-                  </button>
-                </div>
+              <div className={`mb-4 rounded-xl border ${severityClass}`}>
+                <button
+                  onClick={() => setDisruptionOpen(v => !v)}
+                  aria-expanded={disruptionOpen}
+                  className="w-full flex items-center gap-2.5 p-3 text-left"
+                >
+                  <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-xs font-semibold">{ticketDisruption.title}</span>
+                  {disruptionOpen
+                    ? <ChevronUp className="w-3.5 h-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                    : <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-60" aria-hidden="true" />
+                  }
+                </button>
+                {disruptionOpen && (
+                  <div className="px-3 pb-3 text-xs">
+                    <p className="opacity-75 leading-relaxed">{ticketDisruption.description}</p>
+                    <button
+                      onClick={() => navigate('/updates')}
+                      className="mt-1.5 font-semibold underline underline-offset-2"
+                    >
+                      View service updates →
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* QR / Visual tabs */}
-            <div className="mb-3 flex gap-3">
-              <button
-                onClick={() => setTicketView('qr')}
-                className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'qr' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                <QrCode className="w-5 h-5" aria-hidden="true" />QR Code
-              </button>
-              <button
-                onClick={() => setTicketView('visual')}
-                className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'visual' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-              >
-                <Eye className="w-5 h-5" aria-hidden="true" />Visual Validation
-              </button>
-            </div>
-
             {/* Quick action buttons */}
             {(departureStationId || linkedJourney) && (
-              <div className="flex gap-2 mb-5">
+              <div className="flex gap-2 mb-4">
                 {departureStationId && (
                   <button
-                    onClick={() => navigate(`/departures/${departureStationId}`)}
+                    onClick={() => {
+                      if (matchedDeparture?.hasLiveTracking) {
+                        const serviceKey = encodeURIComponent(
+                          `${matchedDeparture.operator}-${matchedDeparture.destination}`
+                        );
+                        navigate(
+                          `/departures/${departureStationId}/track/${serviceKey}?ticketId=${ticket.id}`
+                        );
+                      } else {
+                        const qs = new URLSearchParams({
+                          ticketId: ticket.id,
+                          depTime:  ticket.journey.departure,
+                          depOp:    ticket.journey.operator,
+                        });
+                        navigate(`/departures/${departureStationId}?${qs}`);
+                      }
+                    }}
                     className="flex-1 py-2.5 border-2 border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:border-brand hover:text-brand transition flex items-center justify-center gap-1.5"
                   >
                     <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                    Live Departures
+                    {matchedDeparture?.hasLiveTracking ? 'Track Service' : 'Live Departures'}
                   </button>
                 )}
                 {linkedJourney && (
@@ -226,8 +257,47 @@ export default function TicketDetailPage() {
               </div>
             )}
 
-            {/* Ticket content */}
-            {ticketView === 'qr' ? <QRCodeView ticket={ticket} /> : <AnimatedTicketView ticket={ticket} />}
+            {/* Ticket display — segmented toggle + content in a single card */}
+            <div className="mb-4 bg-gray-50 rounded-2xl p-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">
+                Show ticket as
+              </p>
+              {/* Segmented control */}
+              <div
+                role="tablist"
+                aria-label="Ticket view"
+                className="flex bg-gray-200 rounded-xl p-1 mb-3"
+              >
+                <button
+                  role="tab"
+                  aria-selected={ticketView === 'qr'}
+                  onClick={() => setTicketView('qr')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 ${
+                    ticketView === 'qr'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4" aria-hidden="true" />QR Code
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={ticketView === 'visual'}
+                  onClick={() => setTicketView('visual')}
+                  className={`flex-1 py-2 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5 ${
+                    ticketView === 'visual'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Eye className="w-4 h-4" aria-hidden="true" />Visual
+                </button>
+              </div>
+
+              {/* Ticket content */}
+              {ticketView === 'qr' ? <QRCodeView ticket={ticket} /> : <AnimatedTicketView ticket={ticket} />}
+            </div>
+
 
           </div>
         </BottomDrawer>

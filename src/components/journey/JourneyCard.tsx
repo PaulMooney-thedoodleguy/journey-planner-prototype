@@ -136,7 +136,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
           </div>
           <button
             onClick={() => onSelect(j)}
-            className="px-4 py-2 bg-brand text-white text-sm font-semibold rounded-lg hover:bg-brand-hover transition flex items-center gap-1"
+            className="px-4 py-2 bg-niq-teal text-white text-sm font-semibold rounded-lg hover:bg-niq-teal-dark transition flex items-center gap-1"
           >
             Select <ChevronRight className="w-4 h-4" />
           </button>

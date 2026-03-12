@@ -226,7 +226,7 @@ export default function ResultsPage() {
                   <p className="text-sm mb-6">Try adjusting your search or selecting a different date.</p>
                   <button
                     onClick={() => navigate('/')}
-                    className="bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-hover transition"
+                    className="bg-niq-teal text-white px-6 py-3 rounded-lg font-semibold hover:bg-niq-teal-dark transition"
                   >
                     Back to Search
                   </button>

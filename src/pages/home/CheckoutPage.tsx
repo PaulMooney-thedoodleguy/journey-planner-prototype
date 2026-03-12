@@ -152,7 +152,7 @@ export default function CheckoutPage() {
           </div>
           <button
             type="submit"
-            className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2"
+            className="w-full bg-niq-teal text-white py-4 rounded-lg font-semibold hover:bg-niq-teal-dark transition flex items-center justify-center gap-2"
           >
             <CreditCard className="w-5 h-5" />
             Pay {formatPrice(selectedJourney.price[searchParams.ticketType])}

@@ -152,7 +152,7 @@ export default function AccountPage() {
 
           <button
             type="submit"
-            className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+            className="w-full bg-niq-teal text-white py-3 rounded-lg font-semibold hover:bg-niq-teal-dark transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             {saved ? 'Saved ✓' : 'Save changes'}
           </button>

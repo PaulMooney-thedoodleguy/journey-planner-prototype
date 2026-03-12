@@ -33,7 +33,7 @@ export default function ConfirmationPage() {
           <div className="flex gap-4">
             <button
               onClick={() => navigate('/tickets')}
-              className="flex-1 bg-brand text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-hover transition"
+              className="flex-1 bg-niq-teal text-white px-8 py-3 rounded-lg font-semibold hover:bg-niq-teal-dark transition"
             >
               View Tickets
             </button>

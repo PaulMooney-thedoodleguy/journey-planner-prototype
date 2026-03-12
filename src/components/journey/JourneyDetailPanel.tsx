@@ -217,7 +217,7 @@ export default function JourneyDetailPanel({
       {/* ── Book CTA ───────────────────────────────────────────── */}
       <button
         onClick={onBook}
-        className="w-full py-4 bg-brand text-white rounded-xl font-semibold text-base hover:bg-brand-hover transition flex items-center justify-center gap-3"
+        className="w-full py-4 bg-niq-teal text-white rounded-xl font-semibold text-base hover:bg-niq-teal-dark transition flex items-center justify-center gap-3"
       >
         Book this journey
         <span className="bg-white/20 px-3 py-1 rounded-lg text-sm font-bold">

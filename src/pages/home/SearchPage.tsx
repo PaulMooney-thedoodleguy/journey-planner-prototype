@@ -349,7 +349,7 @@ export default function SearchPage() {
               <button
                 onClick={handleSearch}
                 disabled={isSearching}
-                className="w-full bg-brand text-white py-4 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full bg-niq-teal text-white py-4 rounded-lg font-semibold hover:bg-niq-teal-dark transition flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 <Search className="w-5 h-5" />
                 {isSearching ? 'Searching…' : 'Search Journeys'}

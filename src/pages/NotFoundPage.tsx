@@ -11,7 +11,7 @@ export default function NotFoundPage() {
         <p className="text-gray-600 mb-6">The page you're looking for doesn't exist.</p>
         <button
           onClick={() => navigate('/')}
-          className="bg-brand text-white px-6 py-3 rounded-lg font-semibold hover:bg-brand-hover transition"
+          className="bg-niq-teal text-white px-6 py-3 rounded-lg font-semibold hover:bg-niq-teal-dark transition"
         >
           Back to Planner
         </button>

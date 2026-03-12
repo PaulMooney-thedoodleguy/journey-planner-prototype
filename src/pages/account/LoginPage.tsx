@@ -148,7 +148,7 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand-hover transition mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              className="w-full bg-niq-teal text-white py-3 rounded-lg font-semibold hover:bg-niq-teal-dark transition mt-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             >
               {tab === 'signin' ? 'Sign in →' : 'Create account →'}
             </button>

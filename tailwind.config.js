@@ -18,7 +18,8 @@ export default {
         },
         // ── Naviquate extended palette ────────────────────────────────────────
         niq: {
-          teal:    '#54BF8A',    // Naviquate Teal — primary accent / IQ mark
+          teal:      '#54BF8A',    // Naviquate Teal — primary accent / IQ mark
+          'teal-dark': '#3da876',  // darker teal — button hover state
           orange:  '#F36800',    // Naviquate Orange
           blue:    '#638DA6',    // Naviquate Blue
           sky:     '#A7DDE1',    // Naviquate Sky Blue

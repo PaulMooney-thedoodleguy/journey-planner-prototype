@@ -14,6 +14,7 @@ import TicketWalletPage from './pages/tickets/TicketWalletPage';
 import TicketDetailPage from './pages/tickets/TicketDetailPage';
 import DeparturesPage from './pages/departures/DeparturesPage';
 import ServiceUpdatesPage from './pages/updates/ServiceUpdatesPage';
+import JourneyPlanPage from './pages/journeys/JourneyPlanPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/departures/:stationId" element={<DeparturesPage />} />
               <Route path="/departures/:stationId/track/:serviceKey" element={<DeparturesPage />} />
               <Route path="/updates" element={<ServiceUpdatesPage />} />
+              <Route path="/journeys/:savedJourneyId" element={<JourneyPlanPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             <TopNav />

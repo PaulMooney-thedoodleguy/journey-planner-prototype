@@ -73,7 +73,7 @@ export default function ServiceUpdatesPage() {
                   <div className="flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                       <div>
-                        <h3 className="font-bold text-lg mb-1">{d.title}</h3>
+                        <h2 className="font-bold text-lg mb-1">{d.title}</h2>
                         <p className="text-sm font-medium flex items-center gap-2">
                           <MapPin className="w-4 h-4" />{d.location}
                         </p>

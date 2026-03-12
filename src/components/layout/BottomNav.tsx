@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navigation, Clock, Wallet, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { getTicketStatus } from '../../utils/formatting';
 
 const tabs = [
   { path: '/', label: 'Planner', icon: Navigation, exact: true },
@@ -17,6 +19,18 @@ export default function BottomNav() {
   const isActive = (tab: typeof tabs[0]) =>
     tab.exact ? pathname === tab.path : pathname.startsWith(tab.path);
 
+  const ticketsNavTarget = useMemo(() => {
+    const hit = purchasedTickets.find(t => {
+      const s = getTicketStatus(t);
+      return s === 'active' || s === 'today';
+    });
+    if (!hit) return '/tickets';
+    const bestTicket = hit.isPartOfMultiModal
+      ? purchasedTickets.find(t => t.multiModalGroup === hit.multiModalGroup && t.ticketNumber === 1) ?? hit
+      : hit;
+    return `/tickets/${bestTicket.id}`;
+  }, [purchasedTickets]);
+
   return (
     <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-[1200] lg:hidden">
       <div className="max-w-4xl mx-auto grid grid-cols-4 gap-1">
@@ -26,15 +40,15 @@ export default function BottomNav() {
           return (
             <button
               key={tab.path}
-              onClick={() => navigate(tab.path)}
-              aria-label={tab.label}
+              onClick={() => navigate(tab.path === '/tickets' ? ticketsNavTarget : tab.path)}
+              aria-label={tab.path === '/tickets' && purchasedTickets.length > 0 ? `${tab.label} (${purchasedTickets.length})` : tab.label}
               aria-current={active ? 'page' : undefined}
               className={`flex flex-col items-center py-3 px-2 cursor-pointer relative rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? 'text-brand' : 'text-gray-600'}`}
             >
               <Icon className="w-6 h-6 mb-1" />
               <span className="text-xs font-medium">{tab.label}</span>
               {tab.path === '/tickets' && purchasedTickets.length > 0 && (
-                <div className="absolute top-1 right-1/4 bg-brand text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <div aria-hidden="true" className="absolute top-1 right-1/4 bg-brand text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {purchasedTickets.length}
                 </div>
               )}

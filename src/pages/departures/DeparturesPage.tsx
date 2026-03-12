@@ -465,43 +465,18 @@ export default function DeparturesPage() {
               </div>
 
               {/* Departure rows */}
-              <div className="divide-y">
+              <ul className="divide-y list-none">
                 {isDeparturesLoading ? (
-                  <div className="p-6 text-center text-gray-500 text-sm">
+                  <li className="p-6 text-center text-gray-500 text-sm">
                     Loading departures…
-                  </div>
+                  </li>
                 ) : departures.length === 0 ? (
-                  <div className="p-6 text-center text-gray-500 text-sm">
+                  <li className="p-6 text-center text-gray-500 text-sm">
                     No departures found
-                  </div>
+                  </li>
                 ) : (
-                  departures.map(dep => (
-                    <div
-                      key={`${dep.operator}-${dep.destination}-${dep.time}`}
-                      onClick={() => handleTrackService(dep)}
-                      role={dep.hasLiveTracking ? 'button' : undefined}
-                      tabIndex={dep.hasLiveTracking ? 0 : undefined}
-                      onKeyDown={
-                        dep.hasLiveTracking
-                          ? e => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleTrackService(dep);
-                              }
-                            }
-                          : undefined
-                      }
-                      aria-label={
-                        dep.hasLiveTracking
-                          ? `Track ${dep.operator} to ${dep.destination}, departs ${dep.time}, ${dep.status}`
-                          : undefined
-                      }
-                      className={`px-4 py-3 transition-colors ${
-                        dep.hasLiveTracking
-                          ? 'hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
+                  departures.map(dep => {
+                    const rowGrid = (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 items-center">
                         <div className="font-bold text-base">{dep.time}</div>
 
@@ -537,10 +512,28 @@ export default function DeparturesPage() {
                           )}
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+
+                    return (
+                      <li key={`${dep.operator}-${dep.destination}-${dep.time}`}>
+                        {dep.hasLiveTracking ? (
+                          <button
+                            onClick={() => handleTrackService(dep)}
+                            aria-label={`Track ${dep.operator} to ${dep.destination}, departs ${dep.time}, ${dep.status}`}
+                            className="w-full text-left px-4 py-3 transition-colors hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint"
+                          >
+                            {rowGrid}
+                          </button>
+                        ) : (
+                          <div className="px-4 py-3 transition-colors hover:bg-gray-50">
+                            {rowGrid}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })
                 )}
-              </div>
+              </ul>
             </>
           )}
 

@@ -23,7 +23,7 @@ interface JourneyContextValue {
 const JourneyContext = createContext<JourneyContextValue | null>(null);
 
 export function JourneyProvider({ children }: { children: ReactNode }) {
-  const { addTickets } = useAppContext();
+  const { addTickets, addSavedJourney } = useAppContext();
 
   const [searchParams, setSearchParams] = useState<JourneySearchParams>({
     from: 'Current Location',
@@ -96,6 +96,27 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
     }
 
     addTickets(tickets);
+
+    const isMultiModal = selectedJourney.requiresMultipleTickets ?? false;
+    const groupId = isMultiModal ? (tickets[0].multiModalGroup ?? undefined) : undefined;
+    addSavedJourney({
+      id: crypto.randomUUID(),
+      from: selectedJourney.from,
+      to: selectedJourney.to,
+      date,
+      departure: selectedJourney.departure,
+      arrival: selectedJourney.arrival,
+      duration: selectedJourney.duration,
+      type: selectedJourney.type,
+      operator: selectedJourney.operator,
+      changes: selectedJourney.changes,
+      order: Date.now(),
+      savedAt: new Date().toISOString(),
+      ticketId: isMultiModal ? undefined : tickets[0].id,
+      ticketGroupId: groupId,
+      journeyData: selectedJourney,
+    });
+
     setLastBookingRef(tickets[0].reference);
     return tickets;
   };

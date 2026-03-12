@@ -109,7 +109,14 @@ export default function MapView({
           <button
             onClick={() => setIsFilterOpen(v => !v)}
             aria-expanded={isFilterOpen}
-            aria-label={isFilterOpen ? 'Close mode filter' : 'Filter by transport mode'}
+            aria-controls="map-mode-filter-panel"
+            aria-label={
+              isFilterOpen
+                ? 'Close mode filter'
+                : allActive
+                ? 'Filter by transport mode'
+                : `Filter by transport mode (${activeModes.size} of ${availableModes.length} active)`
+            }
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-md text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
             {isFilterOpen
@@ -121,11 +128,14 @@ export default function MapView({
 
           {/* Expanded filter panel */}
           {isFilterOpen && (
-            <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg p-2 flex flex-col gap-1.5 min-w-[130px]">
-
+            <div
+              id="map-mode-filter-panel"
+              className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg p-2 flex flex-col gap-1.5 min-w-[130px]"
+            >
               {/* All — activates every available mode */}
               <button
                 onClick={() => setActiveModes(new Set(availableModes))}
+                aria-pressed={allActive}
                 className={`flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition ${
                   allActive
                     ? 'bg-brand text-white border-brand'
@@ -145,6 +155,7 @@ export default function MapView({
                   <button
                     key={mode}
                     onClick={() => toggleMode(mode)}
+                    aria-pressed={isActive}
                     style={isActive ? {
                       backgroundColor: 'white',
                       borderColor: hex,

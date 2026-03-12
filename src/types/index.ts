@@ -74,6 +74,24 @@ export interface PurchasedTicket {
   totalTickets?: number;
 }
 
+export interface SavedJourney {
+  id: string;
+  from: string;
+  to: string;
+  date?: string;           // ISO date "YYYY-MM-DD"
+  departure?: string;      // "HH:MM"
+  arrival?: string;        // "HH:MM"
+  duration?: string;       // "2h 15m"
+  type?: TransportMode;
+  operator?: string;
+  changes?: number;
+  order: number;           // user-defined sort position; use Date.now() on creation
+  savedAt: string;         // ISO timestamp
+  ticketId?: string;       // single-ticket linkage (non-multimodal)
+  ticketGroupId?: number;  // multimodal group linkage
+  journeyData?: Journey;   // full Journey object for the plan page
+}
+
 // ─── Stations & departures ────────────────────────────────────
 
 export interface Station {

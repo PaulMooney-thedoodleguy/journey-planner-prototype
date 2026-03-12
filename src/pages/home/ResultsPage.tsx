@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Bookmark } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
+import { useAppContext } from '../../context/AppContext';
 import JourneyCard from '../../components/journey/JourneyCard';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
@@ -31,6 +33,33 @@ const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
 export default function ResultsPage() {
   const navigate = useNavigate();
   const { journeyResults, searchParams, setSelectedJourney } = useJourneyContext();
+  const { savedJourneys, addSavedJourney, removeSavedJourney } = useAppContext();
+
+  const getSavedId = (j: Journey): string | undefined =>
+    savedJourneys.find(sj => sj.journeyData?.id === j.id && sj.date === searchParams.date)?.id;
+
+  const handleSaveToggle = (j: Journey) => {
+    const id = getSavedId(j);
+    if (id) {
+      removeSavedJourney(id);
+    } else {
+      addSavedJourney({
+        id: crypto.randomUUID(),
+        from: j.from,
+        to: j.to,
+        date: searchParams.date,
+        departure: j.departure,
+        arrival: j.arrival,
+        duration: j.duration,
+        type: j.type,
+        operator: j.operator,
+        changes: j.changes,
+        order: Date.now(),
+        savedAt: new Date().toISOString(),
+        journeyData: j,
+      });
+    }
+  };
   usePageTitle('Journey Results');
 
   const [sortBy, setSortBy] = useState<SortOption>('departs');
@@ -105,7 +134,7 @@ export default function ResultsPage() {
             </button>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-              <h2 className="text-2xl font-bold">Available Journeys</h2>
+              <h1 className="text-2xl font-bold">Available Journeys</h1>
               {journeyResults.length > 0 && (
                 <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,16 +193,26 @@ export default function ResultsPage() {
             ) : (
               <div className="space-y-4">
                 {sortedResults.map(j => (
-                  <JourneyCard
-                    key={j.id}
-                    journey={j}
-                    ticketType={searchParams.ticketType}
-                    isGreenest={j.co2 === lowestCO2}
-                    isFastest={getDurationMins(j.duration) === shortestDuration}
-                    isCheapest={j.price[searchParams.ticketType] === lowestPrice}
-                    onSelect={handleSelect}
-                    disruption={getDisruptionForJourney(j)}
-                  />
+                  <div key={j.id} className="relative">
+                    <JourneyCard
+                      journey={j}
+                      ticketType={searchParams.ticketType}
+                      isGreenest={j.co2 === lowestCO2}
+                      isFastest={getDurationMins(j.duration) === shortestDuration}
+                      isCheapest={j.price[searchParams.ticketType] === lowestPrice}
+                      onSelect={handleSelect}
+                      disruption={getDisruptionForJourney(j)}
+                    />
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); handleSaveToggle(j); }}
+                      aria-label={getSavedId(j) ? `Unsave: ${j.from} to ${j.to}` : `Save: ${j.from} to ${j.to}`}
+                      aria-pressed={!!getSavedId(j)}
+                      className="absolute top-3 right-3 p-1.5 rounded-md bg-white/90 shadow-sm border border-gray-200 hover:bg-white transition"
+                    >
+                      <Bookmark className={`w-4 h-4 ${getSavedId(j) ? 'fill-brand text-brand' : 'text-gray-400'}`} />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

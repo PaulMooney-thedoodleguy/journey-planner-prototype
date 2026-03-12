@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Train, Search } from 'lucide-react';
+import { Train, Search, MapPin } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
+import { useAppContext } from '../../context/AppContext';
 import MapView from '../../components/map/MapView';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
+import SavedJourneyCard from '../../components/journey/SavedJourneyCard';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../../utils/recentSearches';
@@ -40,6 +42,7 @@ const PASSENGER_LABELS: Record<PassengerType, string> = {
 export default function SearchPage() {
   const navigate = useNavigate();
   const { searchParams, submitSearch, isSearching, searchError } = useJourneyContext();
+  const { savedJourneys, removeSavedJourney, reorderSavedJourney } = useAppContext();
   usePageTitle('Plan Your Journey');
 
   const [localParams, setLocalParams] = useState<JourneySearchParams>({ ...searchParams });
@@ -310,6 +313,31 @@ export default function SearchPage() {
               </button>
             </div>
           </div>
+
+          {savedJourneys.length > 0 && (
+            <div className="border-t border-gray-200 px-4 sm:px-6 py-4">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-brand" aria-hidden="true" />
+                My Journeys
+              </h2>
+              <div className="space-y-2">
+                {[...savedJourneys]
+                  .sort((a, b) => a.order - b.order)
+                  .map((sj, idx, arr) => (
+                    <SavedJourneyCard
+                      key={sj.id}
+                      savedJourney={sj}
+                      hasTicket={!!(sj.ticketId || sj.ticketGroupId)}
+                      isFirst={idx === 0}
+                      isLast={idx === arr.length - 1}
+                      onMoveUp={() => reorderSavedJourney(sj.id, 'up')}
+                      onMoveDown={() => reorderSavedJourney(sj.id, 'down')}
+                      onDelete={() => removeSavedJourney(sj.id)}
+                    />
+                  ))}
+              </div>
+            </div>
+          )}
         </BottomDrawer>
 
         {/* Map — mobile: absolute full-screen background; desktop: fills remaining right side */}

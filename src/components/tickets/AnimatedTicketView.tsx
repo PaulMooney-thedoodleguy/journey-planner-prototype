@@ -5,15 +5,18 @@ import { formatDate } from '../../utils/formatting';
 const WORDS_OF_DAY = ['FARE', 'RAIL', 'SEAT', 'PASS'];
 
 export default function AnimatedTicketView({ ticket }: { ticket: PurchasedTicket }) {
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [showWord, setShowWord] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString('en-GB'));
   const wordOfDay = WORDS_OF_DAY[new Date().getDate() % WORDS_OF_DAY.length];
 
   useEffect(() => {
-    const wordInterval = setInterval(() => setShowWord(prev => !prev), 3000);
+    // Always keep the clock ticking; only cycle the word/time cross-fade when motion is allowed
     const timeInterval = setInterval(() => setCurrentTime(new Date().toLocaleTimeString('en-GB')), 1000);
+    if (prefersReducedMotion) return () => clearInterval(timeInterval);
+    const wordInterval = setInterval(() => setShowWord(prev => !prev), 3000);
     return () => { clearInterval(wordInterval); clearInterval(timeInterval); };
-  }, []);
+  }, [prefersReducedMotion]);
 
   const gradient = ticket.operatorColor
     ? `linear-gradient(135deg, ${ticket.operatorColor} 0%, ${ticket.operatorColor}dd 100%)`
@@ -22,9 +25,11 @@ export default function AnimatedTicketView({ ticket }: { ticket: PurchasedTicket
   return (
     <div className="relative rounded-2xl p-8 overflow-hidden" style={{ background: gradient }}>
       <style>{`
-        @keyframes sf1{0%,100%{transform:translate(0,0)}25%{transform:translate(30px,-40px)}50%{transform:translate(-20px,-30px)}75%{transform:translate(40px,20px)}}
-        @keyframes sf2{0%,100%{transform:translate(0,0)}25%{transform:translate(-40px,30px)}50%{transform:translate(25px,40px)}75%{transform:translate(-30px,-25px)}}
-        @keyframes sf3{0%,100%{transform:translate(0,0)}25%{transform:translate(20px,35px)}50%{transform:translate(-35px,15px)}75%{transform:translate(15px,-40px)}}
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes sf1{0%,100%{transform:translate(0,0)}25%{transform:translate(30px,-40px)}50%{transform:translate(-20px,-30px)}75%{transform:translate(40px,20px)}}
+          @keyframes sf2{0%,100%{transform:translate(0,0)}25%{transform:translate(-40px,30px)}50%{transform:translate(25px,40px)}75%{transform:translate(-30px,-25px)}}
+          @keyframes sf3{0%,100%{transform:translate(0,0)}25%{transform:translate(20px,35px)}50%{transform:translate(-35px,15px)}75%{transform:translate(15px,-40px)}}
+        }
       `}</style>
 
       {/* Animated background blobs */}
@@ -53,12 +58,14 @@ export default function AnimatedTicketView({ ticket }: { ticket: PurchasedTicket
         {/* Animated word / time display */}
         <div className="bg-white/10 backdrop-blur-sm rounded-xl p-12 mb-6 min-h-[200px] flex items-center justify-center">
           <div className="relative w-full h-full flex items-center justify-center">
-            <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ${showWord ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="text-white text-6xl font-bold tracking-widest">{wordOfDay}</div>
+            <div className={`absolute inset-0 flex items-center justify-center ${prefersReducedMotion ? '' : 'transition-opacity duration-1000'} ${prefersReducedMotion || showWord ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="text-white text-6xl font-bold tracking-widest">{prefersReducedMotion ? currentTime : wordOfDay}</div>
             </div>
-            <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ${!showWord ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="text-white text-5xl font-bold">{currentTime}</div>
-            </div>
+            {!prefersReducedMotion && (
+              <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ${!showWord ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="text-white text-5xl font-bold">{currentTime}</div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -4,19 +4,47 @@ import { Wallet, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
-import { formatDate } from '../../utils/formatting';
+import { formatDate, getTicketStatus } from '../../utils/formatting';
+import type { TicketStatus } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { PurchasedTicket } from '../../types';
+
+type GroupedItem =
+  | { isGroup: true; tickets: PurchasedTicket[]; groupId: number }
+  | { isGroup: false; ticket: PurchasedTicket };
+
+function classifyItem(item: GroupedItem): TicketStatus {
+  return 'ticket' in item ? getTicketStatus(item.ticket) : getTicketStatus(item.tickets[0]);
+}
+
+function StatusBadge({ status }: { status: TicketStatus }) {
+  if (status === 'active') return (
+    <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+      <span className="sr-only">Status: </span>Active Now
+    </span>
+  );
+  if (status === 'today') return (
+    <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-light text-brand">
+      <span className="sr-only">Status: </span>Today
+    </span>
+  );
+  if (status === 'upcoming') return (
+    <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+      <span className="sr-only">Status: </span>Upcoming
+    </span>
+  );
+  return null;
+}
 
 export default function TicketWalletPage() {
   const navigate = useNavigate();
   const { purchasedTickets } = useAppContext();
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+  const [pastOpen, setPastOpen] = useState(false);
   usePageTitle('My Tickets');
 
-  // Group multi-modal tickets together — memoised so it only reruns when tickets change
   const grouped = useMemo(() => {
-    const result: Array<{ isGroup: true; tickets: PurchasedTicket[]; groupId: number } | { isGroup: false; ticket: PurchasedTicket }> = [];
+    const result: GroupedItem[] = [];
     const processedGroups = new Set<number>();
     purchasedTickets.forEach(ticket => {
       if (ticket.isPartOfMultiModal && ticket.multiModalGroup != null) {
@@ -29,8 +57,114 @@ export default function TicketWalletPage() {
         result.push({ isGroup: false, ticket });
       }
     });
-    return result;
+
+    const todayActive = result.filter(i => ['active', 'today'].includes(classifyItem(i)));
+    const upcoming    = result.filter(i => classifyItem(i) === 'upcoming');
+    const past        = result.filter(i => classifyItem(i) === 'past');
+    return { todayActive, upcoming, past };
   }, [purchasedTickets]);
+
+  function renderItem(item: GroupedItem) {
+    if (item.isGroup) {
+      const isExpanded = expandedGroup === item.groupId;
+      const first = item.tickets[0];
+      const status = getTicketStatus(first);
+      return (
+        <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-lg p-6 bg-brand-light">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-brand-light rounded-lg">
+              <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-semibold text-lg text-content-primary">Multi-Modal Journey</p>
+                <StatusBadge status={status} />
+              </div>
+              <p className="text-sm text-brand">{item.tickets.length} tickets required</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div><p className="text-sm text-gray-500">From</p><p className="font-semibold">{first.journey.from}</p></div>
+            <div><p className="text-sm text-gray-500">To</p><p className="font-semibold">{first.journey.to}</p></div>
+            <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(first.date)}</p></div>
+            <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{first.journey.departure}</p></div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            {item.tickets.map(t => (
+              <div key={t.id} className="flex items-center gap-2 px-3 py-1 rounded-full text-sm"
+                style={{ backgroundColor: `${t.operatorColor}20`, border: `2px solid ${t.operatorColor}` }}>
+                <span className="text-lg">{t.operatorLogo}</span>
+                <span className="font-semibold" style={{ color: t.operatorColor }}>{t.operator}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => setExpandedGroup(isExpanded ? null : item.groupId)}
+            className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2">
+            {isExpanded ? 'Hide Individual Tickets' : 'View Individual Tickets'}
+            <ChevronRight className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+          </button>
+          {isExpanded && (
+            <div className="mt-4 space-y-3 pt-4 border-t border-brand-light">
+              {item.tickets.map(t => (
+                <div key={t.id}
+                  className="border-2 rounded-lg p-4 bg-white hover:shadow-md transition cursor-pointer"
+                  style={{ borderColor: t.operatorColor }}
+                  onClick={() => navigate(`/tickets/${t.id}`)}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg text-2xl" style={{ backgroundColor: `${t.operatorColor}20` }}>{t.operatorLogo}</div>
+                      <div>
+                        <p className="font-semibold" style={{ color: t.operatorColor }}>{t.operator}</p>
+                        <p className="text-xs text-gray-500">Ref: {t.reference}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">Ticket {t.ticketNumber}/{t.totalTickets}</p>
+                      <button className="mt-2 px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition" style={{ backgroundColor: t.operatorColor }}>View</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    } else if ('ticket' in item) {
+      const t = item.ticket;
+      const status = getTicketStatus(t);
+      return (
+        <div key={t.id} className="border-2 rounded-lg p-6 hover:shadow-md transition cursor-pointer border-gray-200"
+          onClick={() => navigate(`/tickets/${t.id}`)}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(t.journey.type)}`, color: getModeHex(t.journey.type) }}
+                  className="p-2 rounded-lg"
+                >{getTransportIcon(t.journey.type)}</div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold text-lg">{t.journey.operator}</p>
+                    <StatusBadge status={status} />
+                  </div>
+                  <p className="text-sm text-gray-500">Ref: {t.reference}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><p className="text-sm text-gray-500">From</p><p className="font-semibold">{t.journey.from}</p></div>
+                <div><p className="text-sm text-gray-500">To</p><p className="font-semibold">{t.journey.to}</p></div>
+                <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(t.date)}</p></div>
+                <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{t.journey.departure}</p></div>
+              </div>
+            </div>
+            <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition">View</button>
+          </div>
+        </div>
+      );
+    }
+  }
 
   return (
     <PageShell>
@@ -43,7 +177,7 @@ export default function TicketWalletPage() {
         {purchasedTickets.length === 0 ? (
           <div className="text-center py-12">
             <Wallet className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No tickets yet</h3>
+            <h2 className="text-xl font-semibold text-gray-700 mb-2">No tickets yet</h2>
             <p className="text-gray-500 mb-6">Your purchased tickets will appear here</p>
             <button onClick={() => navigate('/')}
               className="bg-brand text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-hover transition">
@@ -51,101 +185,35 @@ export default function TicketWalletPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {grouped.map(item => {
-              if (item.isGroup) {
-                const isExpanded = expandedGroup === item.groupId;
-                const first = item.tickets[0];
-                return (
-                  <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-lg p-6 bg-brand-light">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-brand-light rounded-lg">
-                        <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg text-content-primary">Multi-Modal Journey</p>
-                        <p className="text-sm text-brand">{item.tickets.length} tickets required</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div><p className="text-sm text-gray-500">From</p><p className="font-semibold">{first.journey.from}</p></div>
-                      <div><p className="text-sm text-gray-500">To</p><p className="font-semibold">{first.journey.to}</p></div>
-                      <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(first.date)}</p></div>
-                      <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{first.journey.departure}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap mb-3">
-                      {item.tickets.map(t => (
-                        <div key={t.id} className="flex items-center gap-2 px-3 py-1 rounded-full text-sm"
-                          style={{ backgroundColor: `${t.operatorColor}20`, border: `2px solid ${t.operatorColor}` }}>
-                          <span className="text-lg">{t.operatorLogo}</span>
-                          <span className="font-semibold" style={{ color: t.operatorColor }}>{t.operator}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => setExpandedGroup(isExpanded ? null : item.groupId)}
-                      className="w-full bg-brand text-white py-3 rounded-lg font-semibold hover:bg-brand-hover transition flex items-center justify-center gap-2">
-                      {isExpanded ? 'Hide Individual Tickets' : 'View Individual Tickets'}
-                      <ChevronRight className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                    </button>
-                    {isExpanded && (
-                      <div className="mt-4 space-y-3 pt-4 border-t border-brand-light">
-                        {item.tickets.map(t => (
-                          <div key={t.id}
-                            className="border-2 rounded-lg p-4 bg-white hover:shadow-md transition cursor-pointer"
-                            style={{ borderColor: t.operatorColor }}
-                            onClick={() => navigate(`/tickets/${t.id}`)}>
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg text-2xl" style={{ backgroundColor: `${t.operatorColor}20` }}>{t.operatorLogo}</div>
-                                <div>
-                                  <p className="font-semibold" style={{ color: t.operatorColor }}>{t.operator}</p>
-                                  <p className="text-xs text-gray-500">Ref: {t.reference}</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-gray-500">Ticket {t.ticketNumber}/{t.totalTickets}</p>
-                                <button className="mt-2 px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition" style={{ backgroundColor: t.operatorColor }}>View</button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              } else if ('ticket' in item) {
-                const t = item.ticket;
-                return (
-                  <div key={t.id} className="border-2 rounded-lg p-6 hover:shadow-md transition cursor-pointer border-gray-200"
-                    onClick={() => navigate(`/tickets/${t.id}`)}>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div
-                            style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(t.journey.type)}`, color: getModeHex(t.journey.type) }}
-                            className="p-2 rounded-lg"
-                          >{getTransportIcon(t.journey.type)}</div>
-                          <div>
-                            <p className="font-semibold text-lg">{t.journey.operator}</p>
-                            <p className="text-sm text-gray-500">Ref: {t.reference}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div><p className="text-sm text-gray-500">From</p><p className="font-semibold">{t.journey.from}</p></div>
-                          <div><p className="text-sm text-gray-500">To</p><p className="font-semibold">{t.journey.to}</p></div>
-                          <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(t.date)}</p></div>
-                          <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{t.journey.departure}</p></div>
-                        </div>
-                      </div>
-                      <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition">View</button>
-                    </div>
-                  </div>
-                );
-              }
-            })}
-          </div>
+          <>
+            {grouped.todayActive.length > 0 && (
+              <section role="region" aria-label="Today and active tickets" className="space-y-4">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Today & Active</h2>
+                {grouped.todayActive.map(item => renderItem(item))}
+              </section>
+            )}
+
+            {grouped.upcoming.length > 0 && (
+              <section role="region" aria-label="Upcoming tickets" className="space-y-4 mt-6">
+                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Upcoming</h2>
+                {grouped.upcoming.map(item => renderItem(item))}
+              </section>
+            )}
+
+            {grouped.past.length > 0 && (
+              <section role="region" aria-label="Past journeys" className="mt-6">
+                <button
+                  onClick={() => setPastOpen(o => !o)}
+                  aria-expanded={pastOpen}
+                  className="w-full flex items-center justify-between text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 hover:text-gray-700 transition"
+                >
+                  Past Journeys ({grouped.past.length})
+                  <ChevronRight className={`w-4 h-4 transition-transform ${pastOpen ? 'rotate-90' : ''}`} />
+                </button>
+                {pastOpen && <div className="space-y-4">{grouped.past.map(item => renderItem(item))}</div>}
+              </section>
+            )}
+          </>
         )}
       </div>
     </PageShell>

@@ -71,7 +71,7 @@ export default function CheckoutPage() {
       </button>
 
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 max-w-2xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6">Passenger Details</h2>
+        <h1 className="text-2xl font-bold mb-6">Passenger Details</h1>
         {/* GDS-style error summary — receives focus on submit failure (WCAG 3.3.1) */}
         {Object.keys(errors).length > 0 && (
           <div

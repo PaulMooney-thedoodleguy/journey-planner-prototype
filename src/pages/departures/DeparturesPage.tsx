@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Clock, MapPin, ChevronRight, Search } from 'lucide-react';
+import { Clock, MapPin, ChevronRight, Search, CalendarDays } from 'lucide-react';
 import { useDeparturesContext } from '../../context/DeparturesContext';
 import MapView from '../../components/map/MapView';
 import LiveTrackingMap from '../../components/departures/LiveTrackingMap';
+import TimetablePanel from '../../components/departures/TimetablePanel';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
-import { MOCK_DEPARTURES, getServiceRoute } from '../../data/departures';
+import { MOCK_DEPARTURES, getServiceRoute, getRouteTimetable } from '../../data/departures';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { MapMarker, Station, Departure } from '../../types';
@@ -23,7 +24,7 @@ import type { MapMarker, Station, Departure } from '../../types';
  * On desktop (lg+) the BottomDrawer becomes a static left panel.
  */
 
-type DepartureView = 'stations' | 'board' | 'tracking';
+type DepartureView = 'stations' | 'board' | 'tracking' | 'timetable';
 
 // Three-position drawer for stations and departure board views.
 const DEPARTURES_SNAP_POINTS = [
@@ -134,7 +135,9 @@ export default function DeparturesPage() {
 
   // Dynamic page title reflects the active view.
   const pageTitle =
-    view === 'tracking' && trackedService
+    view === 'timetable' && trackedService
+      ? `Timetable: ${trackedService.operator} to ${trackedService.destination}`
+      : view === 'tracking' && trackedService
       ? `${trackedService.hasLiveTracking ? 'Live: ' : ''}${trackedService.operator} to ${trackedService.destination}`
       : view === 'board' && selectedStation
       ? `${selectedStation.name} Departures`
@@ -237,7 +240,7 @@ export default function DeparturesPage() {
   // ── Tracking map data ─────────────────────────────────────────────────────
 
   const trackingRoute =
-    trackedService && view === 'tracking'
+    trackedService && (view === 'tracking' || view === 'timetable')
       ? getServiceRoute(trackedService.operator, trackedService.destination)
       : [];
 
@@ -266,6 +269,13 @@ export default function DeparturesPage() {
     });
   }, [selectedStation, trackingRoute]);
 
+  // ── Timetable (derived when tracking a service) ───────────────────────────
+
+  const timetable =
+    trackedService && (view === 'timetable' || view === 'tracking')
+      ? getRouteTimetable(trackedService.operator, trackedService.destination, trackedService.time)
+      : null;
+
   // ── Derived UI ────────────────────────────────────────────────────────────
 
   const platformLabel = selectedStation?.type === 'bus' ? 'Route' : 'Platform';
@@ -281,18 +291,17 @@ export default function DeparturesPage() {
       <div className="absolute inset-0 lg:flex lg:flex-row">
 
         {/*
-         * BottomDrawer — key forces a remount (and snap reset) when switching
-         * between the departures panel and the compact tracking strip.
-         *
-         * 'departures' key: 3-position drawer, starts at half.
-         * 'tracking'   key: locked single position (peek), shows service strip.
+         * BottomDrawer — no key, so it never unmounts during view transitions.
+         * Snap points swap in-place; the drawer smoothly resizes to the new
+         * position without producing a grey flash between views.
          */}
         <BottomDrawer
-          key={view === 'tracking' ? 'tracking' : 'departures'}
-          snapPoints={view === 'tracking' ? TRACKING_SNAP_POINTS : DEPARTURES_SNAP_POINTS}
-          defaultSnapIndex={view === 'tracking' ? 1 : 1}
+          snapPoints={view === 'tracking' || view === 'timetable' ? TRACKING_SNAP_POINTS : DEPARTURES_SNAP_POINTS}
+          defaultSnapIndex={1}
           aria-label={
-            view === 'tracking' && trackedService
+            view === 'timetable' && trackedService
+              ? `Timetable: ${trackedService.operator} to ${trackedService.destination}`
+              : view === 'tracking' && trackedService
               ? `${trackedService.hasLiveTracking ? 'Live tracking: ' : 'Service info: '}${trackedService.operator} to ${trackedService.destination}`
               : 'Live departures'
           }
@@ -359,6 +368,20 @@ export default function DeparturesPage() {
                   </div>
                 </div>
               </div>
+
+              {/* See timetable */}
+              {timetable && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => setView('timetable')}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition hover:opacity-80"
+                    style={{ borderColor: getModeHex(selectedStation.type), color: getModeHex(selectedStation.type) }}
+                  >
+                    <CalendarDays className="w-4 h-4" aria-hidden="true" />
+                    See timetable
+                  </button>
+                </div>
+              )}
 
               {/* Route timeline */}
               {trackingRoute.length > 0 && (
@@ -434,6 +457,18 @@ export default function DeparturesPage() {
               )}
 
             </div>
+          )}
+
+          {/* ── Timetable panel ─────────────────────────────────────────── */}
+          {view === 'timetable' && trackedService && selectedStation && timetable && (
+            <TimetablePanel
+              timetable={timetable}
+              operator={trackedService.operator}
+              destination={trackedService.destination}
+              stationType={selectedStation.type}
+              boardingStopName={selectedStation.name}
+              onBack={() => setView('tracking')}
+            />
           )}
 
           {/* ── Stations view ────────────────────────────────────────────── */}
@@ -716,7 +751,7 @@ export default function DeparturesPage() {
 
         {/* Map — mobile: absolute full-screen background; desktop: fills remaining right side */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
-          {view === 'tracking' && trackedService && selectedStation ? (
+          {(view === 'tracking' || view === 'timetable') && trackedService && selectedStation ? (
             <LiveTrackingMap
               route={trackingRoute}
               vehiclePosition={trackedService.vehiclePosition}

@@ -183,13 +183,27 @@ export default function SearchPage() {
               {showVia && (
                 <div>
                   <label htmlFor="via-input" className="block text-sm font-medium text-gray-700 mb-2">Via <span className="font-normal text-gray-400">(optional)</span></label>
-                  <StationAutocomplete
-                    id="via-input"
-                    value={localParams.via ?? ''}
-                    onChange={v => updateField('via', v)}
-                    placeholder="e.g. Crewe"
-                    inputClassName={inputClass('via')}
-                  />
+                  <div className="flex gap-2">
+                    <StationAutocomplete
+                      id="via-input"
+                      value={localParams.via ?? ''}
+                      onChange={v => updateField('via', v)}
+                      placeholder="e.g. Crewe"
+                      inputClassName={inputClass('via')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowVia(false);
+                        setLocalParams(prev => ({ ...prev, via: '' }));
+                      }}
+                      aria-label="Remove via stop"
+                      title="Remove via stop"
+                      className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0"
+                    >
+                      <Minus className="w-5 h-5" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -206,26 +220,17 @@ export default function SearchPage() {
                     hasError={!!formErrors.to}
                     inputClassName={inputClass('to')}
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (showVia) {
-                        setShowVia(false);
-                        setLocalParams(prev => ({ ...prev, via: '' }));
-                      } else {
-                        setShowVia(true);
-                      }
-                    }}
-                    aria-label={showVia ? 'Remove via stop' : 'Add via stop'}
-                    title={showVia ? 'Remove via stop' : 'Add via stop'}
-                    aria-pressed={showVia}
-                    className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0"
-                  >
-                    {showVia
-                      ? <Minus className="w-5 h-5" aria-hidden="true" />
-                      : <Plus  className="w-5 h-5" aria-hidden="true" />
-                    }
-                  </button>
+                  {!showVia && (
+                    <button
+                      type="button"
+                      onClick={() => setShowVia(true)}
+                      aria-label="Add via stop"
+                      title="Add via stop"
+                      className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0"
+                    >
+                      <Plus className="w-5 h-5" aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
                 {formErrors.to && <p id="to-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.to}</p>}
               </div>

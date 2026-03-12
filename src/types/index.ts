@@ -123,6 +123,18 @@ export interface RouteStop {
   type: TransportMode;
 }
 
+export interface TimetableStop {
+  name: string;
+  times: (string | null)[]; // one per service; null = service doesn't call here
+}
+
+export interface RouteTimetable {
+  stopNames: string[];
+  departureTimes: string[];    // departure time from first stop for each service
+  stops: TimetableStop[];       // rows in the grid
+  selectedServiceIndex: number; // column to highlight
+}
+
 // ─── Disruptions ─────────────────────────────────────────────
 
 export interface Disruption {

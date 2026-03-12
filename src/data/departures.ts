@@ -1,4 +1,4 @@
-import type { Departure, RouteStop } from '../types';
+import type { Departure, RouteStop, RouteTimetable } from '../types';
 
 export const MOCK_DEPARTURES: Record<number, Departure[]> = {
   // ── Station 1: London Kings Cross ────────────────────────────────────────
@@ -382,4 +382,109 @@ export const MOCK_ROUTES: Record<string, RouteStop[]> = {
 
 export function getServiceRoute(operator: string, destination: string): RouteStop[] {
   return MOCK_ROUTES[`${operator}-${destination}`] ?? [];
+}
+
+// ─── Timetable generation ────────────────────────────────────────────────────
+
+interface RouteConfig {
+  legMins: number[];   // journey minutes for each leg (length = stops - 1)
+  freqMins: number;    // service frequency in minutes
+  firstDep: string;    // "HH:MM" first departure from origin
+  lastDep: string;     // "HH:MM" last departure from origin
+}
+
+const ROUTE_CONFIG: Record<string, RouteConfig> = {
+  'LNER-Edinburgh':                       { legMins: [50, 60, 50],      freqMins: 60,  firstDep: '06:00', lastDep: '20:00' },
+  'LNER-Leeds':                           { legMins: [50, 80],           freqMins: 30,  firstDep: '06:30', lastDep: '21:00' },
+  'LNER-York':                            { legMins: [30, 20, 15, 20],  freqMins: 30,  firstDep: '06:30', lastDep: '21:00' },
+  'LNER-Newcastle':                       { legMins: [50, 40, 55],      freqMins: 60,  firstDep: '06:00', lastDep: '21:00' },
+  'Thameslink-Cambridge':                 { legMins: [15, 30, 25],      freqMins: 30,  firstDep: '05:30', lastDep: '23:00' },
+  'Hull Trains-Hull':                     { legMins: [90, 30, 20],      freqMins: 120, firstDep: '07:00', lastDep: '19:00' },
+  'Eurostar-Paris':                       { legMins: [30, 130],          freqMins: 120, firstDep: '06:30', lastDep: '20:30' },
+  'East Midlands Railway-Nottingham':     { legMins: [25, 40, 20],      freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'East Midlands Railway-Leicester':      { legMins: [25, 40],           freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'East Midlands Railway-Derby':          { legMins: [40, 15],           freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'Thameslink-Luton Airport':             { legMins: [5, 20],            freqMins: 15,  firstDep: '05:00', lastDep: '23:45' },
+  'Avanti-Birmingham':                    { legMins: [35, 45],           freqMins: 20,  firstDep: '06:10', lastDep: '21:40' },
+  'Avanti-Manchester':                    { legMins: [35, 50, 20],       freqMins: 20,  firstDep: '06:10', lastDep: '21:10' },
+  'Avanti-Liverpool':                     { legMins: [60, 35],           freqMins: 30,  firstDep: '06:10', lastDep: '21:10' },
+  'London Northwestern-Crewe':            { legMins: [20, 40, 35],       freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'Avanti-Glasgow':                       { legMins: [60, 55, 70],       freqMins: 60,  firstDep: '07:00', lastDep: '20:00' },
+  'Route 46-Camden Town':                 { legMins: [8, 10],            freqMins: 12,  firstDep: '05:30', lastDep: '23:50' },
+  'Route 73-Angel':                       { legMins: [6, 8],             freqMins: 8,   firstDep: '05:00', lastDep: '23:50' },
+  'Route 30-Hackney Central':             { legMins: [8, 10, 8],         freqMins: 10,  firstDep: '05:00', lastDep: '23:50' },
+  'Route 30-Islington':                   { legMins: [8, 5],             freqMins: 10,  firstDep: '05:00', lastDep: '23:50' },
+  'Southern-Brighton':                    { legMins: [12, 35, 28],       freqMins: 30,  firstDep: '05:30', lastDep: '23:00' },
+  'Gatwick Express-Gatwick Airport':      { legMins: [15, 20],           freqMins: 15,  firstDep: '05:00', lastDep: '23:45' },
+  'Southern-Eastbourne':                  { legMins: [12, 30, 45],       freqMins: 30,  firstDep: '05:30', lastDep: '23:00' },
+  'Southeastern-Ramsgate':                { legMins: [45, 30, 40],       freqMins: 60,  firstDep: '06:00', lastDep: '22:00' },
+  'Greater Anglia-Norwich':               { legMins: [30, 20, 20, 30],  freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'Greater Anglia-Ipswich':               { legMins: [30, 20, 20],       freqMins: 30,  firstDep: '06:00', lastDep: '22:00' },
+  'Greater Anglia-Chelmsford':            { legMins: [8, 30],            freqMins: 15,  firstDep: '05:30', lastDep: '23:00' },
+  'c2c-Southend':                         { legMins: [12, 30, 20],       freqMins: 20,  firstDep: '05:30', lastDep: '23:00' },
+  'Elizabeth Line-Shenfield':             { legMins: [8, 25, 15],        freqMins: 10,  firstDep: '05:30', lastDep: '23:50' },
+  'National Express-Oxford':              { legMins: [80],               freqMins: 60,  firstDep: '07:00', lastDep: '21:00' },
+  'National Express-Birmingham':          { legMins: [90, 40],           freqMins: 60,  firstDep: '07:00', lastDep: '21:00' },
+  'National Express-Manchester':          { legMins: [90, 80],           freqMins: 120, firstDep: '07:00', lastDep: '19:00' },
+  'National Express-Bristol':             { legMins: [60, 40],           freqMins: 90,  firstDep: '07:00', lastDep: '20:00' },
+};
+
+function timeToMins(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function addMinutes(t: string, mins: number): string {
+  const total = timeToMins(t) + mins;
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export function getRouteTimetable(
+  operator: string,
+  destination: string,
+  selectedTime: string,
+): RouteTimetable | null {
+  const key    = `${operator}-${destination}`;
+  const route  = MOCK_ROUTES[key];
+  const config = ROUTE_CONFIG[key];
+  if (!route || !config) return null;
+
+  // Build list of origin departure times for the full day
+  const departureTimes: string[] = [];
+  let cur = config.firstDep;
+  while (timeToMins(cur) <= timeToMins(config.lastDep)) {
+    departureTimes.push(cur);
+    cur = addMinutes(cur, config.freqMins);
+  }
+
+  // For each service compute the time at each stop
+  const stopTimesGrid: string[][] = route.map(() => []);
+  for (const dep of departureTimes) {
+    let t = dep;
+    route.forEach((_, idx) => {
+      stopTimesGrid[idx].push(t);
+      if (idx < config.legMins.length) t = addMinutes(t, config.legMins[idx]);
+    });
+  }
+
+  // Find the column closest to the selected service time
+  const selMins = timeToMins(selectedTime);
+  let closestIdx = 0;
+  let minDiff = Infinity;
+  departureTimes.forEach((t, i) => {
+    const diff = Math.abs(timeToMins(t) - selMins);
+    if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+  });
+
+  return {
+    stopNames: route.map(s => s.name),
+    departureTimes,
+    stops: route.map((stop, idx) => ({
+      name: stop.name,
+      times: stopTimesGrid[idx],
+    })),
+    selectedServiceIndex: closestIdx,
+  };
 }

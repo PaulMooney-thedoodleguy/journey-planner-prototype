@@ -231,7 +231,7 @@ export default function SearchPage() {
                   <button
                     type="button"
                     onClick={setNow}
-                    className="text-xs text-brand hover:text-brand-hover font-medium transition"
+                    className="text-xs text-brand hover:text-brand-hover font-medium transition py-1 min-h-[24px]"
                   >
                     Use current time
                   </button>
@@ -274,7 +274,7 @@ export default function SearchPage() {
                       <input type="radio" value={type}
                         checked={localParams.ticketType === type}
                         onChange={() => updateField('ticketType', type)}
-                        className="mr-2" />
+                        className="mr-2 w-6 h-6" />
                       {type}
                     </label>
                   ))}
@@ -290,7 +290,7 @@ export default function SearchPage() {
                       <input type="radio" value={type}
                         checked={localParams.passengerType === type}
                         onChange={() => updateField('passengerType', type)}
-                        className="mr-2" />
+                        className="mr-2 w-6 h-6" />
                       <span className="text-sm">{PASSENGER_LABELS[type]}</span>
                     </label>
                   ))}

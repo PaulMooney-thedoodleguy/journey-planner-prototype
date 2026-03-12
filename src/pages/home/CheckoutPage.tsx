@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
+import { useAuthContext } from '../../context/AuthContext';
 import PageShell from '../../components/layout/PageShell';
 import { formatPrice } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -9,6 +10,7 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { selectedJourney, searchParams, passengerDetails, setPassengerDetails, completePayment } = useJourneyContext();
+  const { user } = useAuthContext();
   const [cardNumber, setCardNumber] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -24,6 +26,13 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!selectedJourney) navigate('/');
   }, [selectedJourney, navigate]);
+
+  // Pre-fill from logged-in user profile (only when fields are empty)
+  useEffect(() => {
+    if (user && !passengerDetails.name && !passengerDetails.email) {
+      setPassengerDetails({ name: user.name, email: user.email });
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!selectedJourney) return null;
 

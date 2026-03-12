@@ -198,3 +198,14 @@ export interface PassengerDetails {
   name: string;
   email: string;
 }
+
+// ─── User account ─────────────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  homeStation?: string;
+  defaultRailcard?: 'none' | '16-25' | 'network' | 'senior';
+}

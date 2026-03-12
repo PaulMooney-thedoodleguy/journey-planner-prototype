@@ -37,6 +37,10 @@ vi.mock('../context/JourneyContext', () => ({
   }),
 }));
 
+vi.mock('../context/AuthContext', () => ({
+  useAuthContext: () => ({ user: null, isLoggedIn: false }),
+}));
+
 vi.mock('../hooks/usePageTitle', () => ({ usePageTitle: () => {} }));
 
 beforeEach(() => {

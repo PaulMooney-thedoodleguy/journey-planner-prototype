@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navigation, Clock, Wallet, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
+import { useAuthContext } from '../../context/AuthContext';
 import BrandLogo from '../icons/BrandLogo';
 import { BRAND_META } from '../../config/brand';
 
@@ -21,6 +22,7 @@ export default function TopNav() {
   const { pathname } = useLocation();
   const navigate    = useNavigate();
   const { purchasedTickets } = useAppContext();
+  const { user } = useAuthContext();
 
   const isActive = (tab: typeof tabs[0]) =>
     tab.exact ? pathname === tab.path : pathname.startsWith(tab.path);
@@ -73,6 +75,26 @@ export default function TopNav() {
           );
         })}
       </nav>
+
+      {/* ── Account button ──────────────────────────────────────────────── */}
+      <div className="ml-auto">
+        {user ? (
+          <button
+            onClick={() => navigate('/account')}
+            aria-label={`My account: ${user.name}`}
+            className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold text-sm flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-brand"
+          >
+            {user.name[0].toUpperCase()}
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate('/login')}
+            className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            Sign in
+          </button>
+        )}
+      </div>
     </header>
   );
 }

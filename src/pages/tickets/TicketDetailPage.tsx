@@ -1,16 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { QrCode, Eye, Map } from 'lucide-react';
+import { QrCode, Eye, Map as MapIcon, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import QRCodeView from '../../components/tickets/QRCodeView';
 import AnimatedTicketView from '../../components/tickets/AnimatedTicketView';
 import PageShell from '../../components/layout/PageShell';
+import BottomDrawer from '../../components/layout/BottomDrawer';
+import MapView from '../../components/map/MapView';
+import { getRoutePolyline, getModeHex, getSeverityHex, getTransportIcon } from '../../utils/transport';
+import { ROUTE_STATION_COORDS, MAP_STATIONS } from '../../data/stations';
+import { getDisruptionsService } from '../../services/transport.service';
+import { formatDate } from '../../utils/formatting';
+import { usePageTitle } from '../../hooks/usePageTitle';
+import type { MapMarker, Disruption } from '../../types';
+
+const SEVERITY_CLASSES: Record<string, string> = {
+  critical: 'bg-red-50 border-red-200 text-red-900',
+  high:     'bg-orange-50 border-orange-200 text-orange-900',
+  medium:   'bg-yellow-50 border-yellow-200 text-yellow-900',
+  low:      'bg-blue-50 border-blue-200 text-blue-900',
+};
+
+function normalizeStation(s: string) {
+  return s.toLowerCase().replace(/\b(london|station|bus stop|coach)\b/g, '').trim();
+}
+
+function findDepartureStationId(from: string): number | null {
+  const key = normalizeStation(from);
+  return MAP_STATIONS.find(s => {
+    const n = normalizeStation(s.name);
+    return n === key || n.includes(key) || key.includes(n);
+  })?.id ?? null;
+}
 
 export default function TicketDetailPage() {
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const { purchasedTickets, savedJourneys } = useAppContext();
   const [ticketView, setTicketView] = useState<'qr' | 'visual'>('qr');
+  const [disruptions, setDisruptions] = useState<Disruption[]>([]);
+  usePageTitle('My Ticket');
 
   const ticket = purchasedTickets.find(t => t.id === ticketId);
 
@@ -21,6 +50,11 @@ export default function TicketDetailPage() {
       )
     : undefined;
 
+  useEffect(() => {
+    getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));
+  }, []);
+
+  // Keep screen on while displaying QR code
   useEffect(() => {
     if (ticketView !== 'qr') return;
 
@@ -49,6 +83,43 @@ export default function TicketDetailPage() {
     };
   }, [ticketView]);
 
+  const ticketDisruption = useMemo(() =>
+    disruptions.find(d =>
+      d.operator.toLowerCase() === (ticket?.journey.operator.toLowerCase() ?? '') ||
+      d.location.toLowerCase().includes(ticket?.journey.from.toLowerCase() ?? '') ||
+      d.location.toLowerCase().includes(ticket?.journey.to.toLowerCase() ?? '')
+    ) ?? null,
+    [disruptions, ticket]
+  );
+
+  const routePolyline = useMemo(() =>
+    ticket?.journey.legs ? getRoutePolyline(ticket.journey.legs) : [],
+    [ticket]
+  );
+
+  const routeMarkers: MapMarker[] = useMemo(() => {
+    if (!ticket?.journey.legs) return [];
+    return Array.from(
+      new Map(
+        ticket.journey.legs.flatMap(leg => [
+          [leg.from, { leg, name: leg.from }],
+          [leg.to,   { leg, name: leg.to   }],
+        ])
+      ).values()
+    ).flatMap(({ leg, name }) => {
+      const coord = ROUTE_STATION_COORDS[name];
+      return coord ? [{ id: name, lat: coord.lat, lng: coord.lng, type: leg.mode, label: name }] : [];
+    });
+  }, [ticket]);
+
+  const mapCenter = useMemo(() => {
+    if (routePolyline.length >= 2) return undefined; // FitBounds handles it
+    const coord = ticket ? ROUTE_STATION_COORDS[ticket.journey.from] : null;
+    return coord ?? { lat: 51.515, lng: -0.13 };
+  }, [ticket, routePolyline]);
+
+  const departureStationId = ticket ? findDepartureStationId(ticket.journey.from) : null;
+
   if (!ticket) {
     return (
       <PageShell>
@@ -61,43 +132,117 @@ export default function TicketDetailPage() {
     );
   }
 
+  const severityClass = ticketDisruption
+    ? (SEVERITY_CLASSES[ticketDisruption.severity] ?? SEVERITY_CLASSES.medium)
+    : '';
+
   return (
-    <PageShell>
-      <div className="max-w-2xl mx-auto">
-        <button onClick={() => navigate('/tickets')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
-          ← Back to Tickets
-        </button>
+    <PageShell fullHeight>
+      <div className="absolute inset-0 lg:flex lg:flex-row">
 
-        <h1 className="text-xl font-bold text-gray-900 mb-4">
-          {ticket.services ? ticket.services[0] : `${ticket.journey.from} to ${ticket.journey.to}`}
-        </h1>
+        {/* ── Ticket details panel ─────────────────────────────────────────── */}
+        <BottomDrawer aria-label="Ticket details">
+          <div className="p-4 sm:p-6 pb-8">
 
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setTicketView('qr')}
-            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'qr' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-          >
-            <QrCode className="w-5 h-5" />QR Code
-          </button>
-          <button
-            onClick={() => setTicketView('visual')}
-            className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'visual' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-          >
-            <Eye className="w-5 h-5" />Visual Validation
-          </button>
+            <button
+              onClick={() => navigate('/tickets')}
+              className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2 text-sm"
+            >
+              ← Back to Tickets
+            </button>
+
+            {/* Journey summary */}
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(ticket.journey.type)}`, color: getModeHex(ticket.journey.type) }}
+                className="p-2 rounded-lg shrink-0"
+              >
+                {getTransportIcon(ticket.journey.type, 'w-5 h-5')}
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">
+                  {ticket.journey.from} → {ticket.journey.to}
+                </h1>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {ticket.journey.operator} · {formatDate(ticket.date)} · {ticket.journey.departure}
+                </p>
+              </div>
+            </div>
+
+            {/* Disruption alert */}
+            {ticketDisruption && (
+              <div className={`mb-4 flex items-start gap-2.5 p-3 rounded-xl border ${severityClass}`}>
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="text-xs">
+                  <p className="font-semibold">{ticketDisruption.title}</p>
+                  <p className="opacity-75 mt-0.5 leading-relaxed">{ticketDisruption.description}</p>
+                  <button
+                    onClick={() => navigate('/updates')}
+                    className="mt-1.5 font-semibold underline underline-offset-2"
+                  >
+                    View service updates →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* QR / Visual tabs */}
+            <div className="mb-3 flex gap-3">
+              <button
+                onClick={() => setTicketView('qr')}
+                className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'qr' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <QrCode className="w-5 h-5" aria-hidden="true" />QR Code
+              </button>
+              <button
+                onClick={() => setTicketView('visual')}
+                className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2 ${ticketView === 'visual' ? 'bg-brand text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <Eye className="w-5 h-5" aria-hidden="true" />Visual Validation
+              </button>
+            </div>
+
+            {/* Quick action buttons */}
+            {(departureStationId || linkedJourney) && (
+              <div className="flex gap-2 mb-5">
+                {departureStationId && (
+                  <button
+                    onClick={() => navigate(`/departures/${departureStationId}`)}
+                    className="flex-1 py-2.5 border-2 border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:border-brand hover:text-brand transition flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    Live Departures
+                  </button>
+                )}
+                {linkedJourney && (
+                  <button
+                    onClick={() => navigate(`/journeys/${linkedJourney.id}`)}
+                    className="flex-1 py-2.5 border-2 border-brand text-brand rounded-lg text-sm font-semibold hover:bg-brand-light transition flex items-center justify-center gap-1.5"
+                  >
+                    <MapIcon className="w-4 h-4" aria-hidden="true" />
+                    Journey Plan
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Ticket content */}
+            {ticketView === 'qr' ? <QRCodeView ticket={ticket} /> : <AnimatedTicketView ticket={ticket} />}
+
+          </div>
+        </BottomDrawer>
+
+        {/* ── Route map ───────────────────────────────────────────────────── */}
+        <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
+          <MapView
+            markers={routeMarkers}
+            center={mapCenter}
+            zoom={mapCenter ? 13 : undefined}
+            routePolyline={routePolyline}
+            height="100%"
+          />
         </div>
 
-        {linkedJourney && (
-          <button
-            onClick={() => navigate(`/journeys/${linkedJourney.id}`)}
-            className="w-full py-3 border-2 border-brand text-brand rounded-lg font-semibold hover:bg-brand-light transition flex items-center justify-center gap-2 mb-6"
-          >
-            <Map className="w-5 h-5" aria-hidden="true" />
-            View Journey Plan
-          </button>
-        )}
-
-        {ticketView === 'qr' ? <QRCodeView ticket={ticket} /> : <AnimatedTicketView ticket={ticket} />}
       </div>
     </PageShell>
   );

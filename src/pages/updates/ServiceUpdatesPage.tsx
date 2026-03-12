@@ -13,7 +13,15 @@ const SEVERITIES: Array<'all' | Severity> = ['all', 'critical', 'high', 'medium'
 // Zoom out enough to show England when no disruption is selected
 const DEFAULT_CENTER = { lat: 52.5, lng: -1.5 };
 const DEFAULT_ZOOM   = 7;
-const SELECTED_ZOOM  = 12;
+
+/** Map affectedRadius (metres) to a sensible zoom level. */
+function radiusToZoom(metres: number): number {
+  if (metres <  1500) return 14;
+  if (metres <  4000) return 13;
+  if (metres <  8000) return 12;
+  if (metres < 20000) return 11;
+  return 10;
+}
 
 export default function ServiceUpdatesPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
@@ -38,11 +46,13 @@ export default function ServiceUpdatesPage() {
 
   const selectedDisruption = disruptions.find(d => d.id === selectedId) ?? null;
 
-  // Map center — zoom to selected disruption, otherwise show all of England
+  // Map center/zoom — radius-derived zoom when disruption selected; England overview otherwise
   const mapCenter = selectedDisruption?.lat && selectedDisruption?.lng
     ? { lat: selectedDisruption.lat, lng: selectedDisruption.lng }
     : DEFAULT_CENTER;
-  const mapZoom = selectedDisruption ? SELECTED_ZOOM : DEFAULT_ZOOM;
+  const mapZoom = selectedDisruption
+    ? radiusToZoom(selectedDisruption.affectedRadius ?? 5000)
+    : DEFAULT_ZOOM;
 
   // All disruption markers (used when nothing is selected)
   const allDisruptionMarkers: MapMarker[] = disruptions
@@ -235,8 +245,8 @@ export default function ServiceUpdatesPage() {
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
             markers={activeMarkers}
-            center={selectedDisruption ? undefined : mapCenter}
-            zoom={selectedDisruption ? undefined : mapZoom}
+            center={mapCenter}
+            zoom={mapZoom}
             polylines={activePolylines}
             circles={activeCircles}
             onMarkerClick={handleMarkerClick}

@@ -21,29 +21,35 @@ function FitBounds({ points }: { points: [number, number][] }) {
 function SetView({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom, { animate: true });
+    map.setView(center, zoom, { animate: true, duration: 0.25 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, center[0], center[1], zoom]);
   return null;
 }
 
 /**
- * Leaflet DivIcon for a station marker.
- * Uses the same react-icons/md components as ModeIcon — single source of truth.
- * White bg + coloured border matches the card icon container style.
+ * Leaflet DivIcon for a station marker — cached by type+colour to avoid
+ * repeated renderToStaticMarkup calls when markers are re-rendered.
  */
+const _iconCache = new Map<string, L.DivIcon>();
+
 function stationIcon(type: TransportMode, colorOverride?: string) {
   const hex = colorOverride ?? getModeHex(type);
+  const cacheKey = `${type}:${hex}`;
+  if (_iconCache.has(cacheKey)) return _iconCache.get(cacheKey)!;
+
   const Icon = ICONS[type] ?? ICONS['train'];
   const svg = renderToStaticMarkup(createElement(Icon, { size: 20, color: hex }));
 
-  return L.divIcon({
+  const icon = L.divIcon({
     html: `<div style="width:36px;height:36px;border-radius:8px;background:white;border:2.5px solid ${hex};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.18);">${svg}</div>`,
     className: '',
     iconSize: [36, 36],
     iconAnchor: [18, 18],
     popupAnchor: [0, -22],
   });
+  _iconCache.set(cacheKey, icon);
+  return icon;
 }
 
 export default function MapView({
@@ -161,13 +167,6 @@ export default function MapView({
               pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.85 }}
             />
           </>
-        ) : polylines.length >= 1 ? (
-          // Fit to disruption route when no journey route is active
-          <FitBounds
-            points={polylines.flatMap(pl =>
-              pl.points.map(p => [p.lat, p.lng] as [number, number])
-            )}
-          />
         ) : (
           <SetView center={mapCenter} zoom={zoom ?? 13} />
         )}

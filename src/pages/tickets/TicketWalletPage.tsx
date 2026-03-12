@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, ChevronRight } from 'lucide-react';
+import { Wallet, ChevronRight, AlertTriangle, Leaf, Clock, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { formatDate, getTicketStatus } from '../../utils/formatting';
-import type { TicketStatus } from '../../utils/formatting';
+import { getDisruptionsService } from '../../services/transport.service';
+import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { PurchasedTicket } from '../../types';
+import type { TicketStatus } from '../../utils/formatting';
+import type { PurchasedTicket, Disruption } from '../../types';
 
 type GroupedItem =
   | { isGroup: true; tickets: PurchasedTicket[]; groupId: number }
@@ -36,12 +38,38 @@ function StatusBadge({ status }: { status: TicketStatus }) {
   return null;
 }
 
+function normalizeStation(s: string) {
+  return s.toLowerCase().replace(/\b(london|station|bus stop|coach)\b/g, '').trim();
+}
+
+function findDepartureStationId(from: string): number | null {
+  const key = normalizeStation(from);
+  return MAP_STATIONS.find(s => {
+    const n = normalizeStation(s.name);
+    return n === key || n.includes(key) || key.includes(n);
+  })?.id ?? null;
+}
+
+function getDisruptionForTicket(ticket: PurchasedTicket, disruptions: Disruption[]): Disruption | null {
+  return disruptions.find(d =>
+    d.operator.toLowerCase() === ticket.journey.operator.toLowerCase() ||
+    d.location.toLowerCase().includes(ticket.journey.from.toLowerCase()) ||
+    d.location.toLowerCase().includes(ticket.journey.to.toLowerCase())
+  ) ?? null;
+}
+
 export default function TicketWalletPage() {
   const navigate = useNavigate();
   const { purchasedTickets } = useAppContext();
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const [pastOpen, setPastOpen] = useState(false);
+  const [co2Open, setCo2Open] = useState(false);
+  const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   usePageTitle('My Tickets');
+
+  useEffect(() => {
+    getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));
+  }, []);
 
   const grouped = useMemo(() => {
     const result: GroupedItem[] = [];
@@ -57,11 +85,30 @@ export default function TicketWalletPage() {
         result.push({ isGroup: false, ticket });
       }
     });
-
     const todayActive = result.filter(i => ['active', 'today'].includes(classifyItem(i)));
     const upcoming    = result.filter(i => classifyItem(i) === 'upcoming');
     const past        = result.filter(i => classifyItem(i) === 'past');
     return { todayActive, upcoming, past };
+  }, [purchasedTickets]);
+
+  // Next departure today — for the hero card
+  const { nextTicket, nextStationId } = useMemo(() => {
+    const todayTickets = purchasedTickets.filter(t => {
+      const s = getTicketStatus(t);
+      return s === 'today' || s === 'active';
+    });
+    if (!todayTickets.length) return { nextTicket: null, nextStationId: null };
+    const ticket = [...todayTickets].sort((a, b) =>
+      a.journey.departure.localeCompare(b.journey.departure)
+    )[0];
+    return { nextTicket: ticket, nextStationId: findDepartureStationId(ticket.journey.from) };
+  }, [purchasedTickets]);
+
+  // CO₂ saved vs driving across all tickets
+  const co2Stats = useMemo(() => {
+    const train = purchasedTickets.reduce((sum, t) => sum + (t.journey.co2 ?? 0), 0);
+    const car   = purchasedTickets.reduce((sum, t) => sum + (t.journey.carCo2 ?? t.journey.co2 * 4), 0);
+    return { train, car, saved: Math.max(0, car - train) };
   }, [purchasedTickets]);
 
   function renderItem(item: GroupedItem) {
@@ -69,6 +116,7 @@ export default function TicketWalletPage() {
       const isExpanded = expandedGroup === item.groupId;
       const first = item.tickets[0];
       const status = getTicketStatus(first);
+      const disruption = getDisruptionForTicket(first, disruptions);
       return (
         <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-lg p-6 bg-brand-light">
           <div className="flex items-center gap-3 mb-3">
@@ -91,6 +139,14 @@ export default function TicketWalletPage() {
             <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(first.date)}</p></div>
             <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{first.journey.departure}</p></div>
           </div>
+
+          {disruption && (
+            <div className="mb-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+              <span><span className="font-semibold">Disruption: </span>{disruption.title}</span>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 flex-wrap mb-3">
             {item.tickets.map(t => (
               <div key={t.id} className="flex items-center gap-2 px-3 py-1 rounded-full text-sm"
@@ -134,6 +190,7 @@ export default function TicketWalletPage() {
     } else if ('ticket' in item) {
       const t = item.ticket;
       const status = getTicketStatus(t);
+      const disruption = getDisruptionForTicket(t, disruptions);
       return (
         <div key={t.id} className="border-2 rounded-lg p-6 hover:shadow-md transition cursor-pointer border-gray-200"
           onClick={() => navigate(`/tickets/${t.id}`)}>
@@ -158,8 +215,14 @@ export default function TicketWalletPage() {
                 <div><p className="text-sm text-gray-500">Date</p><p className="font-semibold">{formatDate(t.date)}</p></div>
                 <div><p className="text-sm text-gray-500">Departure</p><p className="font-semibold">{t.journey.departure}</p></div>
               </div>
+              {disruption && (
+                <div className="mt-3 flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                  <span><span className="font-semibold">Disruption: </span>{disruption.title}</span>
+                </div>
+              )}
             </div>
-            <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition">View</button>
+            <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition ml-4 shrink-0">View</button>
           </div>
         </div>
       );
@@ -186,6 +249,52 @@ export default function TicketWalletPage() {
           </div>
         ) : (
           <>
+            {/* ── Next departure hero ─────────────────────────────────────── */}
+            {nextTicket && (
+              <div className="mb-6 rounded-xl p-4 bg-gradient-to-br from-brand to-indigo-700 text-white">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-4 h-4 opacity-80" aria-hidden="true" />
+                  <span className="text-xs font-semibold uppercase tracking-wider opacity-80">
+                    {getTicketStatus(nextTicket) === 'active' ? 'Currently travelling' : 'Next departure'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    style={{ backgroundColor: 'white', color: getModeHex(nextTicket.journey.type) }}
+                    className="p-2 rounded-lg shrink-0"
+                  >
+                    {getTransportIcon(nextTicket.journey.type, 'w-5 h-5')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-base leading-tight truncate">
+                      {nextTicket.journey.from} → {nextTicket.journey.to}
+                    </p>
+                    <p className="text-sm opacity-90 mt-0.5">
+                      {nextTicket.journey.operator} · {nextTicket.journey.departure}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={e => { e.stopPropagation(); navigate(`/tickets/${nextTicket.id}`); }}
+                    className="flex-1 py-2 bg-white text-brand rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+                  >
+                    View Ticket
+                  </button>
+                  {nextStationId && (
+                    <button
+                      onClick={e => { e.stopPropagation(); navigate(`/departures/${nextStationId}`); }}
+                      className="flex-1 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                      Live Departures
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── Ticket sections ─────────────────────────────────────────── */}
             {grouped.todayActive.length > 0 && (
               <section role="region" aria-label="Today and active tickets" className="space-y-4">
                 <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Today & Active</h2>
@@ -212,6 +321,50 @@ export default function TicketWalletPage() {
                 </button>
                 {pastOpen && <div className="space-y-4">{grouped.past.map(item => renderItem(item))}</div>}
               </section>
+            )}
+
+            {/* ── CO₂ summary ─────────────────────────────────────────────── */}
+            {co2Stats.saved > 0 && (
+              <div className="mt-6 border-t border-gray-100 pt-5">
+                <button
+                  onClick={() => setCo2Open(o => !o)}
+                  aria-expanded={co2Open}
+                  className="w-full flex items-center justify-between text-sm font-semibold text-gray-700 hover:text-gray-900 transition"
+                >
+                  <span className="flex items-center gap-2">
+                    <Leaf className="w-4 h-4 text-green-600" aria-hidden="true" />
+                    Your carbon footprint
+                  </span>
+                  <ChevronRight className={`w-4 h-4 transition-transform text-gray-400 ${co2Open ? 'rotate-90' : ''}`} />
+                </button>
+                {co2Open && (
+                  <div className="mt-3 p-4 rounded-xl bg-green-50 border border-green-100">
+                    <p className="text-2xl font-bold text-green-700">{co2Stats.saved.toFixed(1)} kg CO₂ saved</p>
+                    <p className="text-sm text-green-600 mt-0.5">
+                      vs driving across {purchasedTickets.length} journey{purchasedTickets.length !== 1 ? 's' : ''}
+                    </p>
+                    <div className="mt-4 space-y-2.5">
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        <span className="w-16 shrink-0 font-medium">By train</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-green-500 h-2 rounded-full"
+                            style={{ width: `${Math.max(2, (co2Stats.train / co2Stats.car) * 100)}%` }}
+                          />
+                        </div>
+                        <span className="w-14 text-right font-medium">{co2Stats.train.toFixed(1)} kg</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-600">
+                        <span className="w-16 shrink-0 font-medium">By car</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div className="bg-gray-400 h-2 rounded-full w-full" />
+                        </div>
+                        <span className="w-14 text-right font-medium">{co2Stats.car.toFixed(1)} kg</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

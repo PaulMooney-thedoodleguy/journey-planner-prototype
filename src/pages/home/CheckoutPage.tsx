@@ -66,12 +66,12 @@ export default function CheckoutPage() {
 
   return (
     <PageShell>
-      <button onClick={() => navigate('/results')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
+      <button onClick={() => navigate('/results')} className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2">
         ← Back to Results
       </button>
 
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Passenger Details</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Passenger Details</h1>
         {/* GDS-style error summary — receives focus on submit failure (WCAG 3.3.1) */}
         {Object.keys(errors).length > 0 && (
           <div

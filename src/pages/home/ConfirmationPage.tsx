@@ -21,7 +21,7 @@ export default function ConfirmationPage() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Booking Confirmed!</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h1>
           {lastBookingRef && (
             <p className="text-sm font-mono font-semibold text-gray-800 bg-gray-100 rounded-lg px-4 py-2 mb-3 inline-block tracking-widest">
               {lastBookingRef}

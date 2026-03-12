@@ -117,7 +117,7 @@ export default function TicketWalletPage() {
       const status = getTicketStatus(first);
       const disruption = getDisruptionForTicket(first, disruptions);
       return (
-        <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-lg p-6 bg-brand-light">
+        <div key={`group-${item.groupId}`} className="border-2 border-brand rounded-xl p-6 bg-brand-light">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-brand-light rounded-lg">
               <svg className="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +164,7 @@ export default function TicketWalletPage() {
             <div className="mt-4 space-y-3 pt-4 border-t border-brand-light">
               {item.tickets.map(t => (
                 <div key={t.id}
-                  className="border-2 rounded-lg p-4 bg-white hover:shadow-md transition cursor-pointer"
+                  className="border-2 rounded-xl p-4 bg-white hover:shadow-md transition cursor-pointer"
                   style={{ borderColor: t.operatorColor }}
                   onClick={() => navigate(`/tickets/${t.id}`)}>
                   <div className="flex items-start justify-between">
@@ -177,7 +177,7 @@ export default function TicketWalletPage() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Ticket {t.ticketNumber}/{t.totalTickets}</p>
-                      <button className="mt-2 px-4 py-2 text-white text-sm rounded-lg hover:opacity-90 transition" style={{ backgroundColor: t.operatorColor }}>View</button>
+                      <button className="mt-2 px-4 py-2 text-white text-sm rounded-xl hover:opacity-90 transition" style={{ backgroundColor: t.operatorColor }}>View</button>
                     </div>
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export default function TicketWalletPage() {
       const status = getTicketStatus(t);
       const disruption = getDisruptionForTicket(t, disruptions);
       return (
-        <div key={t.id} className="border-2 rounded-lg p-6 hover:shadow-md transition cursor-pointer border-gray-200"
+        <div key={t.id} className="border-2 rounded-xl p-6 hover:shadow-md transition cursor-pointer border-gray-200"
           onClick={() => navigate(`/tickets/${t.id}`)}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -221,7 +221,7 @@ export default function TicketWalletPage() {
                 </div>
               )}
             </div>
-            <button className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition ml-4 shrink-0">View</button>
+            <button className="px-6 py-2 bg-brand text-white rounded-xl hover:bg-brand-hover transition ml-4 shrink-0">View</button>
           </div>
         </div>
       );
@@ -233,7 +233,7 @@ export default function TicketWalletPage() {
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
         <div className="flex items-center gap-3 mb-3">
           <Wallet className="w-8 h-8 text-brand" />
-          <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
+          <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
         </div>
 
         {/* Stats bar */}
@@ -254,7 +254,7 @@ export default function TicketWalletPage() {
 
         {purchasedTickets.length === 0 ? (
           <div className="text-center py-12">
-            <Wallet className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <h2 className="text-xl font-semibold text-gray-700 mb-2">No tickets yet</h2>
             <p className="text-gray-500 mb-6">Your purchased tickets will appear here</p>
             <button onClick={() => navigate('/')}

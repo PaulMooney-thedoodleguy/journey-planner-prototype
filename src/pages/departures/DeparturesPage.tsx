@@ -274,7 +274,7 @@ export default function DeparturesPage() {
 
           {/* ── Tracking strip ──────────────────────────────────────────── */}
           {view === 'tracking' && trackedService && (
-            <div className="px-4 py-3">
+            <div className="px-4 sm:px-6 py-3">
               <div className="flex items-center gap-3">
                 <button
                   onClick={fromTicketId
@@ -302,7 +302,7 @@ export default function DeparturesPage() {
                   )}
                 </div>
 
-                <div className="shrink-0 flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                <div className="shrink-0 flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                   <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
                   <span className="text-xs font-bold text-green-700 uppercase tracking-wide">Live</span>
                 </div>
@@ -313,7 +313,7 @@ export default function DeparturesPage() {
           {/* ── Stations view ────────────────────────────────────────────── */}
           {view === 'stations' && (
             <>
-              <div className="px-4 pt-2 pb-3 border-b border-gray-100">
+              <div className="px-4 sm:px-6 pt-2 pb-3 border-b border-gray-100">
 
                 {/* Station search — ARIA 1.2 combobox pattern */}
                 <div className="relative mb-3">
@@ -388,7 +388,7 @@ export default function DeparturesPage() {
 
                 <div className="flex items-center gap-3">
                   <Clock className="w-6 h-6 text-brand shrink-0" aria-hidden="true" />
-                  <h1 className="text-xl font-bold text-gray-900">Live Departures</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">Live Departures</h1>
                 </div>
                 <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
                   <MapPin className="w-4 h-4 shrink-0" aria-hidden="true" />
@@ -396,7 +396,7 @@ export default function DeparturesPage() {
                 </div>
               </div>
 
-              <div className="px-4 py-3 space-y-2">
+              <div className="px-4 sm:px-6 py-3 space-y-2">
                 {nearbyStations.map(station => {
                   const stationDeps = MOCK_DEPARTURES[station.id] ?? [];
                   const hasLive = stationDeps.some(d => d.hasLiveTracking);
@@ -441,7 +441,7 @@ export default function DeparturesPage() {
           {/* ── Board view ────────────────────────────────────────────────── */}
           {view === 'board' && (
             <>
-              <div className="px-4 pt-2 pb-3 border-b border-gray-100">
+              <div className="px-4 sm:px-6 pt-2 pb-3 border-b border-gray-100">
                 <button
                   onClick={fromTicketId
                     ? () => navigate(`/tickets/${fromTicketId}`)
@@ -477,7 +477,7 @@ export default function DeparturesPage() {
               </div>
 
               {/* Column header */}
-              <div className="bg-brand text-white px-4 py-2.5 sticky top-0">
+              <div className="bg-brand text-white px-4 sm:px-6 py-2.5 sticky top-0">
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide">
                   <div>Time</div>
                   <div>Destination</div>
@@ -510,11 +510,11 @@ export default function DeparturesPage() {
                           <p className="font-semibold text-sm truncate">{dep.destination}</p>
                           <p className="text-xs text-gray-500 truncate">{dep.operator}</p>
                           {/* Platform chip — mobile only */}
-                          <span className="sm:hidden inline-block mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
+                          <span className="sm:hidden inline-flex items-center mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
                             {dep.platform !== null ? `${platformLabel} ${dep.platform}` : 'TBA'}
                           </span>
                           {isYourService && (
-                            <span className="inline-block mt-1 text-xs font-bold text-brand border border-brand bg-white px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center mt-1 text-xs font-bold text-brand border border-brand bg-white px-2 py-0.5 rounded-full">
                               Your service
                             </span>
                           )}
@@ -527,7 +527,7 @@ export default function DeparturesPage() {
 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-1">
                           <span
-                            className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                               dep.status === 'On time'
                                 ? 'bg-green-100 text-green-800'
                                 : 'bg-orange-100 text-orange-800'
@@ -555,12 +555,12 @@ export default function DeparturesPage() {
                           <button
                             onClick={() => handleTrackService(dep)}
                             aria-label={`Track ${dep.operator} to ${dep.destination}, departs ${dep.time}, ${dep.status}`}
-                            className="w-full text-left px-4 py-3 transition-colors hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint"
+                            className="w-full text-left px-4 sm:px-6 py-3 transition-colors hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint"
                           >
                             {rowGrid}
                           </button>
                         ) : (
-                          <div className="px-4 py-3 transition-colors hover:bg-gray-50">
+                          <div className="px-4 sm:px-6 py-3 transition-colors hover:bg-gray-50">
                             {rowGrid}
                           </div>
                         )}

@@ -54,7 +54,7 @@ export default function SavedJourneyCard({
 
   if (confirmDelete) {
     return (
-      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
         <p className="text-sm font-medium text-amber-900 mb-1">Remove saved journey?</p>
         <p className="text-xs text-amber-800 mb-3">
           This journey is linked to a purchased ticket. Removing it from My Journeys won't affect your ticket, which remains in your Tickets wallet.
@@ -63,14 +63,14 @@ export default function SavedJourneyCard({
           <button
             type="button"
             onClick={() => setConfirmDelete(false)}
-            className="flex-1 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+            className="flex-1 py-2 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onDelete}
-            className="flex-1 py-2 rounded-lg bg-red-600 text-sm font-medium text-white hover:bg-red-700 transition"
+            className="flex-1 py-2 rounded-xl bg-red-600 text-sm font-medium text-white hover:bg-red-700 transition"
           >
             Delete anyway
           </button>
@@ -80,7 +80,7 @@ export default function SavedJourneyCard({
   }
 
   return (
-    <div className="relative flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
+    <div className="relative flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
       {/* Clickable area — navigates to journey plan */}
       <button
         type="button"
@@ -90,7 +90,7 @@ export default function SavedJourneyCard({
       >
         {/* Mode icon */}
         <div
-          className="rounded-lg flex items-center justify-center w-9 h-9 shrink-0"
+          className="rounded-xl flex items-center justify-center w-9 h-9 shrink-0"
           style={{ backgroundColor: 'white', border: `2px solid ${modeHex}`, color: modeHex }}
           aria-hidden="true"
         >
@@ -135,7 +135,7 @@ export default function SavedJourneyCard({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-gray-200 bg-white shadow-lg z-10 py-1"
+            className="absolute right-0 top-full mt-1 w-40 rounded-xl border border-gray-200 bg-white shadow-lg z-10 py-1"
           >
             <button
               type="button"

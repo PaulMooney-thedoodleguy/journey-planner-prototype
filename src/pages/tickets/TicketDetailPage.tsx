@@ -142,7 +142,7 @@ export default function TicketDetailPage() {
   if (!ticket) {
     return (
       <PageShell>
-        <button onClick={() => navigate('/tickets')} className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
+        <button onClick={() => navigate('/tickets')} className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2">
           ← Back to Tickets
         </button>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Ticket not found</h1>

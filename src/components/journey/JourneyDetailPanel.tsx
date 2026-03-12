@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bookmark, AlertTriangle, ChevronLeft, ChevronDown } from 'lucide-react';
+import { Bookmark, AlertTriangle, ChevronDown } from 'lucide-react';
 import type { Journey, TicketType, Disruption } from '../../types';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { formatPrice } from '../../utils/formatting';
@@ -51,10 +51,9 @@ export default function JourneyDetailPanel({
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-brand hover:text-brand-hover font-medium"
+          className="text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2"
         >
-          <ChevronLeft className="w-4 h-4" />
-          Back to results
+          ← Back to results
         </button>
         <button
           type="button"

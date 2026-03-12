@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark } from 'lucide-react';
+import { Bookmark, Info } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
 import JourneyCard from '../../components/journey/JourneyCard';
@@ -168,13 +168,13 @@ export default function ResultsPage() {
             <div className="p-4 sm:p-6 pb-8">
               <button
                 onClick={() => navigate('/')}
-                className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2"
+                className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2"
               >
                 ← Back to Search
               </button>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                <h1 className="text-2xl font-bold">Available Journeys</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Available Journeys</h1>
                 {journeyResults.length > 0 && (
                   <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -221,6 +221,7 @@ export default function ResultsPage() {
 
               {journeyResults.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
+                  <Info className="w-12 h-12 text-gray-300 mx-auto mb-3" aria-hidden="true" />
                   <p className="text-lg font-medium mb-2">No journeys found</p>
                   <p className="text-sm mb-6">Try adjusting your search or selecting a different date.</p>
                   <button

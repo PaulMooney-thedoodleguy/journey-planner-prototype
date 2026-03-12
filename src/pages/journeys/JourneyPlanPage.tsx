@@ -22,9 +22,9 @@ export default function JourneyPlanPage() {
   if (!savedJourney) {
     return (
       <PageShell>
-        <Link to="/" className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2">
+        <button onClick={() => navigate('/')} className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2">
           ← Back to Search
-        </Link>
+        </button>
         <h1 className="text-xl font-bold text-gray-900 mb-2">Journey not found</h1>
         <p className="text-gray-600">This saved journey could not be found.</p>
       </PageShell>
@@ -84,7 +84,7 @@ export default function JourneyPlanPage() {
           <div className="p-4 sm:p-6 pb-8">
             <button
               onClick={() => navigate(-1)}
-              className="mb-4 text-brand hover:text-brand-hover font-medium flex items-center gap-2"
+              className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2"
             >
               ← Back
             </button>

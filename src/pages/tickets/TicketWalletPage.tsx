@@ -62,8 +62,7 @@ export default function TicketWalletPage() {
   const navigate = useNavigate();
   const { purchasedTickets } = useAppContext();
   const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
-  const [pastOpen, setPastOpen] = useState(false);
-  const [co2Open, setCo2Open] = useState(false);
+  const [pastOpen, setPastOpen] = useState(true);
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   usePageTitle('My Tickets');
 
@@ -232,10 +231,26 @@ export default function TicketWalletPage() {
   return (
     <PageShell>
       <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-3">
           <Wallet className="w-8 h-8 text-brand" />
           <h1 className="text-3xl font-bold text-gray-900">My Tickets</h1>
         </div>
+
+        {/* Stats bar */}
+        {purchasedTickets.length > 0 && (
+          <div className="flex items-center gap-4 mb-6 text-sm text-gray-500 border-b border-gray-100 pb-4">
+            <span className="font-medium text-gray-700">{purchasedTickets.length} journey{purchasedTickets.length !== 1 ? 's' : ''}</span>
+            {co2Stats.saved > 0 && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="flex items-center gap-1 text-green-700 font-medium">
+                  <Leaf className="w-3.5 h-3.5" aria-hidden="true" />
+                  {co2Stats.saved.toFixed(1)} kg CO₂ saved vs driving
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         {purchasedTickets.length === 0 ? (
           <div className="text-center py-12">
@@ -325,47 +340,44 @@ export default function TicketWalletPage() {
 
             {/* ── CO₂ summary ─────────────────────────────────────────────── */}
             {co2Stats.saved > 0 && (
-              <div className="mt-6 border-t border-gray-100 pt-5">
-                <button
-                  onClick={() => setCo2Open(o => !o)}
-                  aria-expanded={co2Open}
-                  className="w-full flex items-center justify-between text-sm font-semibold text-gray-700 hover:text-gray-900 transition"
-                >
-                  <span className="flex items-center gap-2">
-                    <Leaf className="w-4 h-4 text-green-600" aria-hidden="true" />
-                    Your carbon footprint
-                  </span>
-                  <ChevronRight className={`w-4 h-4 transition-transform text-gray-400 ${co2Open ? 'rotate-90' : ''}`} />
-                </button>
-                {co2Open && (
-                  <div className="mt-3 p-4 rounded-xl bg-green-50 border border-green-100">
-                    <p className="text-2xl font-bold text-green-700">{co2Stats.saved.toFixed(1)} kg CO₂ saved</p>
-                    <p className="text-sm text-green-600 mt-0.5">
-                      vs driving across {purchasedTickets.length} journey{purchasedTickets.length !== 1 ? 's' : ''}
-                    </p>
-                    <div className="mt-4 space-y-2.5">
-                      <div className="flex items-center gap-3 text-xs text-gray-600">
-                        <span className="w-16 shrink-0 font-medium">By train</span>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="bg-green-500 h-2 rounded-full"
-                            style={{ width: `${Math.max(2, (co2Stats.train / co2Stats.car) * 100)}%` }}
-                          />
-                        </div>
-                        <span className="w-14 text-right font-medium">{co2Stats.train.toFixed(1)} kg</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-gray-600">
-                        <span className="w-16 shrink-0 font-medium">By car</span>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div className="bg-gray-400 h-2 rounded-full w-full" />
-                        </div>
-                        <span className="w-14 text-right font-medium">{co2Stats.car.toFixed(1)} kg</span>
-                      </div>
+              <div className="mt-6 p-4 rounded-xl bg-green-50 border border-green-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Leaf className="w-4 h-4 text-green-600" aria-hidden="true" />
+                  <span className="text-sm font-semibold text-green-800">Carbon footprint</span>
+                </div>
+                <p className="text-2xl font-bold text-green-700 mb-0.5">{co2Stats.saved.toFixed(1)} kg CO₂ saved</p>
+                <p className="text-sm text-green-600 mb-4">
+                  vs driving across {purchasedTickets.length} journey{purchasedTickets.length !== 1 ? 's' : ''}
+                </p>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3 text-xs text-gray-600">
+                    <span className="w-16 shrink-0 font-medium">By train</span>
+                    <div className="flex-1 bg-white/70 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${Math.max(2, (co2Stats.train / co2Stats.car) * 100)}%` }}
+                      />
                     </div>
+                    <span className="w-14 text-right font-medium">{co2Stats.train.toFixed(1)} kg</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-3 text-xs text-gray-600">
+                    <span className="w-16 shrink-0 font-medium">By car</span>
+                    <div className="flex-1 bg-white/70 rounded-full h-2 overflow-hidden">
+                      <div className="bg-gray-400 h-2 rounded-full w-full" />
+                    </div>
+                    <span className="w-14 text-right font-medium">{co2Stats.car.toFixed(1)} kg</span>
+                  </div>
+                </div>
               </div>
             )}
+
+            {/* ── Plan another journey CTA ─────────────────────────────────── */}
+            <button
+              onClick={() => navigate('/')}
+              className="mt-6 w-full py-3 border-2 border-brand text-brand rounded-xl font-semibold hover:bg-brand-light transition flex items-center justify-center gap-2"
+            >
+              Plan another journey
+            </button>
           </>
         )}
       </div>

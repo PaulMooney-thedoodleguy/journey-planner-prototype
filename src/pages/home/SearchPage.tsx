@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Train, Search, MapPin, Plus, Minus } from 'lucide-react';
+import { Navigation, Search, MapPin, Plus, Minus } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
 import MapView from '../../components/map/MapView';
@@ -131,8 +131,8 @@ export default function SearchPage() {
         <BottomDrawer aria-label="Journey search">
           <div className="p-4 sm:p-6 pb-8">
             <div className="flex items-center gap-3 mb-6">
-              <Train className="w-8 h-8 text-brand" />
-              <h1 className="text-3xl font-bold text-gray-900">Plan Your Journey</h1>
+              <Navigation className="w-6 h-6 text-brand" aria-hidden="true" />
+              <h1 className="text-xl font-bold text-gray-900">Plan Your Journey</h1>
             </div>
 
             <div className="space-y-6">

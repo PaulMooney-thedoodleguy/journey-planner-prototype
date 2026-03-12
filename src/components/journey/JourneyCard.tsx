@@ -21,7 +21,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
   const borderClass = isGreenest
     ? 'border-green-500 bg-green-50/50'
     : isFastest
-    ? 'border-blue-500 bg-blue-50/50'
+    ? 'border-brand bg-brand-light'
     : isCheapest
     ? 'border-purple-500 bg-purple-50/50'
     : 'border-gray-200 hover:border-brand';
@@ -52,7 +52,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
             </span>
           )}
           {isFastest && (
-            <span className="inline-flex items-center gap-1.5 bg-blue-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 bg-brand text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               Fastest
             </span>

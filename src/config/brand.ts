@@ -1,6 +1,6 @@
 // ─── App identity ────────────────────────────────────────────────────────────
 export const BRAND_META = {
-  appName: 'Journey Planner',
+  appName: 'Naviquate',
   tagline:  'Plan your UK journey',
 } as const;
 

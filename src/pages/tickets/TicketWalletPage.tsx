@@ -244,7 +244,7 @@ export default function TicketWalletPage() {
         <BottomDrawer className="!bg-white/80 backdrop-blur-md" aria-label="My Tickets">
         <div className="p-4 sm:p-6 pb-8">
         <div className="flex items-center gap-3 mb-3">
-          <Wallet className="w-8 h-8 text-brand" />
+          <Wallet className="w-6 h-6 text-brand" />
           <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
         </div>
 
@@ -278,7 +278,7 @@ export default function TicketWalletPage() {
           <>
             {/* ── Next departure hero ─────────────────────────────────────── */}
             {nextTicket && (
-              <div className="mb-6 rounded-xl p-4 bg-gradient-to-br from-brand to-indigo-700 text-white">
+              <div className="mb-6 rounded-xl p-4 bg-gradient-to-br from-brand to-brand-hover text-white">
                 <div className="flex items-center gap-2 mb-3">
                   <Clock className="w-4 h-4 opacity-80" aria-hidden="true" />
                   <span className="text-xs font-semibold uppercase tracking-wider opacity-80">

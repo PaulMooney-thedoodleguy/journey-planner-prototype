@@ -32,8 +32,8 @@ export default function BottomNav() {
   }, [purchasedTickets]);
 
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-[1200] lg:hidden">
-      <div className="max-w-4xl mx-auto grid grid-cols-4 gap-1">
+    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-brand shadow-lg z-[1200] lg:hidden">
+      <div className="max-w-4xl mx-auto grid grid-cols-4">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const active = isActive(tab);
@@ -43,12 +43,14 @@ export default function BottomNav() {
               onClick={() => navigate(tab.path === '/tickets' ? ticketsNavTarget : tab.path)}
               aria-label={tab.path === '/tickets' && purchasedTickets.length > 0 ? `${tab.label} (${purchasedTickets.length})` : tab.label}
               aria-current={active ? 'page' : undefined}
-              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? 'text-brand' : 'text-gray-600'}`}
+              className={`flex flex-col items-center py-3 px-2 cursor-pointer relative focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white border-t-2 transition-colors ${
+                active ? 'text-white border-niq-teal' : 'text-white/60 border-transparent hover:text-white'
+              }`}
             >
               <Icon className="w-6 h-6 mb-1" />
               <span className="text-xs font-medium">{tab.label}</span>
               {tab.path === '/tickets' && purchasedTickets.length > 0 && (
-                <div aria-hidden="true" className="absolute top-1 right-1/4 bg-brand text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <div aria-hidden="true" className="absolute top-1 right-1/4 bg-white text-brand text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {purchasedTickets.length}
                 </div>
               )}

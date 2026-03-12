@@ -10,6 +10,7 @@ interface AppContextValue {
   addSavedJourney: (j: SavedJourney) => void;
   removeSavedJourney: (id: string) => void;
   reorderSavedJourney: (id: string, direction: 'up' | 'down') => void;
+  resetAppData: () => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -80,10 +81,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const resetAppData = useCallback(() => {
+    setPurchasedTickets([]);
+    setSavedJourneys([]);
+  }, []);
+
   return (
     <AppContext.Provider value={{
       purchasedTickets, addTickets,
       savedJourneys, addSavedJourney, removeSavedJourney, reorderSavedJourney,
+      resetAppData,
     }}>
       {children}
     </AppContext.Provider>

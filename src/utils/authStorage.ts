@@ -45,5 +45,6 @@ export function clearAllAppData(): void {
     localStorage.removeItem(USERS_KEY);
     localStorage.removeItem('journey_planner_tickets');
     localStorage.removeItem('journey_planner_saved_journeys');
+    localStorage.removeItem('journey_planner_recent_searches');
   } catch { /* ignore */ }
 }

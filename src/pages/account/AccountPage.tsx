@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -15,6 +16,7 @@ const RAILCARD_OPTIONS: { value: NonNullable<import('../../types').UserProfile['
 export default function AccountPage() {
   const navigate = useNavigate();
   const { user, isLoggedIn, logout, updateProfile, clearAllData } = useAuthContext();
+  const { resetAppData } = useAppContext();
   usePageTitle('My Account');
 
   const [name, setName]             = useState('');
@@ -56,7 +58,8 @@ export default function AccountPage() {
   }
 
   function handleDeleteEverything() {
-    clearAllData();
+    clearAllData();   // clears localStorage + auth state
+    resetAppData();   // resets in-memory tickets + saved journeys
     navigate('/');
   }
 

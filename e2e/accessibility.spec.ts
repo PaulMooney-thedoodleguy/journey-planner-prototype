@@ -48,9 +48,11 @@ async function navigateToCheckout(page: Page) {
   await page.click('button:has-text("Search Journeys")');
   await page.waitForURL('**/results');
 
-  // Select the first journey to proceed to checkout
+  // Select the first journey — opens detail panel, then book to reach checkout
   await page.waitForSelector('button:has-text("Select")');
   await page.locator('button:has-text("Select")').first().click();
+  await page.waitForSelector('button:has-text("Book this journey")');
+  await page.locator('button:has-text("Book this journey")').first().click();
   await page.waitForURL('**/checkout');
   await page.waitForLoadState('networkidle');
 }

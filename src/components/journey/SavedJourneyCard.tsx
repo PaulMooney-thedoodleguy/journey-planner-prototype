@@ -125,6 +125,7 @@ export default function SavedJourneyCard({
           type="button"
           onClick={() => setMenuOpen(prev => !prev)}
           aria-label="Journey options"
+          title="Journey options"
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"

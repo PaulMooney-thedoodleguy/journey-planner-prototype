@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Train, Search, MapPin } from 'lucide-react';
+import { Train, Search, MapPin, Plus, Minus } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
 import MapView from '../../components/map/MapView';
@@ -46,6 +46,7 @@ export default function SearchPage() {
   usePageTitle('Plan Your Journey');
 
   const [localParams, setLocalParams] = useState<JourneySearchParams>({ ...searchParams });
+  const [showVia, setShowVia] = useState(!!searchParams.via);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches());
 
@@ -169,7 +170,7 @@ export default function SearchPage() {
                     hasError={!!formErrors.from}
                     inputClassName={inputClass('from')}
                   />
-                  <button onClick={swapLocations} aria-label="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors">
+                  <button onClick={swapLocations} aria-label="Swap departure and destination" title="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                     </svg>
@@ -178,18 +179,54 @@ export default function SearchPage() {
                 {formErrors.from && <p id="from-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.from}</p>}
               </div>
 
+              {/* Via — shown between From and To when toggled on */}
+              {showVia && (
+                <div>
+                  <label htmlFor="via-input" className="block text-sm font-medium text-gray-700 mb-2">Via <span className="font-normal text-gray-400">(optional)</span></label>
+                  <StationAutocomplete
+                    id="via-input"
+                    value={localParams.via ?? ''}
+                    onChange={v => updateField('via', v)}
+                    placeholder="e.g. Crewe"
+                    inputClassName={inputClass('via')}
+                  />
+                </div>
+              )}
+
               {/* To */}
               <div>
                 <label htmlFor="to-input" className="block text-sm font-medium text-gray-700 mb-2">To</label>
-                <StationAutocomplete
-                  id="to-input"
-                  value={localParams.to}
-                  onChange={v => updateField('to', v)}
-                  placeholder="e.g. Manchester Piccadilly"
-                  errorId={formErrors.to ? 'to-error' : undefined}
-                  hasError={!!formErrors.to}
-                  inputClassName={inputClass('to')}
-                />
+                <div className="flex gap-2">
+                  <StationAutocomplete
+                    id="to-input"
+                    value={localParams.to}
+                    onChange={v => updateField('to', v)}
+                    placeholder="e.g. Manchester Piccadilly"
+                    errorId={formErrors.to ? 'to-error' : undefined}
+                    hasError={!!formErrors.to}
+                    inputClassName={inputClass('to')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (showVia) {
+                        setShowVia(false);
+                        setLocalParams(prev => ({ ...prev, via: '' }));
+                      } else {
+                        setShowVia(true);
+                      }
+                    }}
+                    aria-label={showVia ? 'Remove via stop' : 'Add via stop'}
+                    title={showVia ? 'Remove via stop' : 'Add via stop'}
+                    aria-pressed={showVia}
+                    className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0"
+                  >
+                    {showVia
+                      ? <Minus className="w-5 h-5" aria-hidden="true" />
+                      : <Plus  className="w-5 h-5" aria-hidden="true" />
+                    }
+                  </button>
+                </div>
                 {formErrors.to && <p id="to-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.to}</p>}
               </div>
 
@@ -214,6 +251,7 @@ export default function SearchPage() {
                           type="button"
                           onClick={() => dismissRecentSearch(i)}
                           aria-label={`Remove recent search: ${s.from} to ${s.to}`}
+                          title={`Remove recent search: ${s.from} to ${s.to}`}
                           className="text-gray-400 hover:text-red-500 transition p-0.5 rounded leading-none"
                         >
                           ×

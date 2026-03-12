@@ -1,7 +1,7 @@
 import { createElement, useEffect } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Polyline, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Popup, Tooltip, useMap } from 'react-leaflet';
 import type { RouteStop, TransportMode } from '../../types';
 import { ICONS } from '../icons/ModeIcon';
 import { getModeHex } from '../../utils/transport';
@@ -119,6 +119,12 @@ export default function LiveTrackingMap({
             position={[stop.lat, stop.lng]}
             icon={stopIcon(stop, stationName)}
           >
+            <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+              <span className="font-medium text-sm">
+                {stop.name}
+                {stop.name === stationName && ' — You are here'}
+              </span>
+            </Tooltip>
             <Popup>
               <span className="font-medium text-sm">
                 {stop.name}
@@ -135,6 +141,9 @@ export default function LiveTrackingMap({
             icon={vehicleIcon(stationType)}
             zIndexOffset={1000}
           >
+            <Tooltip direction="top" offset={[0, -28]} opacity={1}>
+              <span className="font-medium text-sm text-green-700">Live vehicle position</span>
+            </Tooltip>
             <Popup>
               <span className="font-medium text-sm text-green-600">🟢 Live vehicle position</span>
             </Popup>

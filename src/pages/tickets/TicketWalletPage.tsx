@@ -3,13 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Wallet, ChevronRight, AlertTriangle, Leaf, Clock, ArrowRight } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
+import BottomDrawer from '../../components/layout/BottomDrawer';
+import MapView from '../../components/map/MapView';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { formatDate, getTicketStatus } from '../../utils/formatting';
 import { getDisruptionsService } from '../../services/transport.service';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { TicketStatus } from '../../utils/formatting';
-import type { PurchasedTicket, Disruption } from '../../types';
+import type { PurchasedTicket, Disruption, MapMarker } from '../../types';
+
+const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
+  id: s.id,
+  lat: s.lat ?? 51.515,
+  lng: s.lng ?? -0.13,
+  type: s.type,
+  label: s.name,
+}));
 
 type GroupedItem =
   | { isGroup: true; tickets: PurchasedTicket[]; groupId: number }
@@ -229,8 +239,10 @@ export default function TicketWalletPage() {
   }
 
   return (
-    <PageShell>
-      <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
+    <PageShell fullHeight>
+      <div className="absolute inset-0 lg:flex lg:flex-row">
+        <BottomDrawer className="!bg-white/80 backdrop-blur-md" aria-label="My Tickets">
+        <div className="p-4 sm:p-6 pb-8">
         <div className="flex items-center gap-3 mb-3">
           <Wallet className="w-8 h-8 text-brand" />
           <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
@@ -380,6 +392,11 @@ export default function TicketWalletPage() {
             </button>
           </>
         )}
+        </div>
+        </BottomDrawer>
+        <div className="flex-1 relative">
+          <MapView markers={mapMarkers} height="100%" />
+        </div>
       </div>
     </PageShell>
   );

@@ -248,6 +248,7 @@ export default function ResultsPage() {
                         type="button"
                         onClick={e => { e.stopPropagation(); handleSaveToggle(j); }}
                         aria-label={getSavedId(j) ? `Unsave: ${j.from} to ${j.to}` : `Save: ${j.from} to ${j.to}`}
+                        title={getSavedId(j) ? `Unsave: ${j.from} to ${j.to}` : `Save: ${j.from} to ${j.to}`}
                         aria-pressed={!!getSavedId(j)}
                         className="absolute top-3 right-3 p-1.5 rounded-md bg-white/90 shadow-sm border border-gray-200 hover:bg-white transition"
                       >

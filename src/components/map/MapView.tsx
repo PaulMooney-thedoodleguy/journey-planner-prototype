@@ -1,7 +1,7 @@
 import { useState, createElement, useEffect } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap } from 'react-leaflet';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
@@ -121,9 +121,14 @@ export default function MapView({
             eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
           >
             {m.label && (
-              <Popup>
-                <span className="font-medium text-sm">{m.label}</span>
-              </Popup>
+              <>
+                <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+                  <span className="font-medium text-sm">{m.label}</span>
+                </Tooltip>
+                <Popup>
+                  <span className="font-medium text-sm">{m.label}</span>
+                </Popup>
+              </>
             )}
           </Marker>
         ))}

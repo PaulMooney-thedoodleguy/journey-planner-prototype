@@ -59,6 +59,7 @@ export default function JourneyDetailPanel({
           type="button"
           onClick={onToggleSave}
           aria-label={isSaved ? `Unsave: ${j.from} to ${j.to}` : `Save: ${j.from} to ${j.to}`}
+          title={isSaved ? `Unsave: ${j.from} to ${j.to}` : `Save: ${j.from} to ${j.to}`}
           aria-pressed={isSaved}
           className="p-1.5 rounded-md bg-white/90 shadow-sm border border-gray-200 hover:bg-white transition"
         >

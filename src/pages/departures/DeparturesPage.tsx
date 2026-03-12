@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Clock, MapPin, ChevronRight, Search } from 'lucide-react';
 import { useDeparturesContext } from '../../context/DeparturesContext';
@@ -32,10 +32,11 @@ const DEPARTURES_SNAP_POINTS = [
   { vh: 0.92, label: 'Expanded'   },
 ];
 
-// Single locked position for tracking view — shows only the compact service strip.
-// One snap point means the drawer cannot be resized.
+// Three positions for tracking view: compact peek / route visible / full.
 const TRACKING_SNAP_POINTS = [
-  { vh: 0.20, label: 'Live tracking info' },
+  { vh: 0.28, label: 'Collapsed'    },
+  { vh: 0.65, label: 'Route visible' },
+  { vh: 0.92, label: 'Full route'   },
 ];
 
 export default function DeparturesPage() {
@@ -134,7 +135,7 @@ export default function DeparturesPage() {
   // Dynamic page title reflects the active view.
   const pageTitle =
     view === 'tracking' && trackedService
-      ? `Live: ${trackedService.operator} to ${trackedService.destination}`
+      ? `${trackedService.hasLiveTracking ? 'Live: ' : ''}${trackedService.operator} to ${trackedService.destination}`
       : view === 'board' && selectedStation
       ? `${selectedStation.name} Departures`
       : 'Live Departures';
@@ -201,7 +202,7 @@ export default function DeparturesPage() {
   // ── Service tracking ──────────────────────────────────────────────────────
 
   const handleTrackService = (dep: Departure) => {
-    if (!dep.hasLiveTracking || !selectedStation) return;
+    if (!selectedStation) return;
     setTrackedService(dep);
     const key = encodeURIComponent(`${dep.operator}-${dep.destination}`);
     setView('tracking');
@@ -240,6 +241,31 @@ export default function DeparturesPage() {
       ? getServiceRoute(trackedService.operator, trackedService.destination)
       : [];
 
+  // ── Tracking: vehicle and boarding stop indices ───────────────────────────
+
+  // Index of the route stop nearest to the vehicle's current position.
+  const vehicleStopIndex = useMemo((): number => {
+    if (!trackedService?.vehiclePosition || trackingRoute.length === 0) return -1;
+    const vp = trackedService.vehiclePosition;
+    let minSq = Infinity;
+    let nearest = 0;
+    trackingRoute.forEach((stop, i) => {
+      const sq = (stop.lat - vp.lat) ** 2 + (stop.lng - vp.lng) ** 2;
+      if (sq < minSq) { minSq = sq; nearest = i; }
+    });
+    return nearest;
+  }, [trackedService?.vehiclePosition, trackingRoute]);
+
+  // Index of the stop that matches the selected station (where the user wants to board).
+  const boardingStopIndex = useMemo((): number => {
+    if (!selectedStation || trackingRoute.length === 0) return -1;
+    const name = selectedStation.name.toLowerCase();
+    return trackingRoute.findIndex(s => {
+      const sn = s.name.toLowerCase();
+      return sn === name || sn.includes(name) || name.includes(sn);
+    });
+  }, [selectedStation, trackingRoute]);
+
   // ── Derived UI ────────────────────────────────────────────────────────────
 
   const platformLabel = selectedStation?.type === 'bus' ? 'Route' : 'Platform';
@@ -264,49 +290,149 @@ export default function DeparturesPage() {
         <BottomDrawer
           key={view === 'tracking' ? 'tracking' : 'departures'}
           snapPoints={view === 'tracking' ? TRACKING_SNAP_POINTS : DEPARTURES_SNAP_POINTS}
-          defaultSnapIndex={view === 'tracking' ? 0 : 1}
+          defaultSnapIndex={view === 'tracking' ? 1 : 1}
           aria-label={
             view === 'tracking' && trackedService
-              ? `Live tracking: ${trackedService.operator} to ${trackedService.destination}`
+              ? `${trackedService.hasLiveTracking ? 'Live tracking: ' : 'Service info: '}${trackedService.operator} to ${trackedService.destination}`
               : 'Live departures'
           }
         >
 
-          {/* ── Tracking strip ──────────────────────────────────────────── */}
-          {view === 'tracking' && trackedService && (
-            <div className="px-4 sm:px-6 py-3">
-              <div className="flex items-center gap-3">
+          {/* ── Tracking panel ──────────────────────────────────────────── */}
+          {view === 'tracking' && trackedService && selectedStation && (
+            <div className="px-4 sm:px-6 pb-6">
+
+              {/* Top bar: back + LIVE badge */}
+              <div className="flex items-center gap-3 pt-3 pb-4">
                 <button
                   onClick={fromTicketId
                     ? () => navigate(`/tickets/${fromTicketId}`)
                     : handleBackToBoard}
-                  className="shrink-0 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-1 transition-colors"
+                  className="shrink-0 text-brand hover:text-brand-hover font-medium text-sm transition-colors"
                   aria-label={fromTicketId ? 'Back to ticket' : 'Back to departure board'}
+                  title={fromTicketId ? 'Back to ticket' : 'Back to departure board'}
                 >
                   {fromTicketId ? '← Back to Ticket' : '← Back'}
                 </button>
+                <div className="flex-1" />
+                {trackedService.hasLiveTracking && (
+                  <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-0.5">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                    <span className="text-xs font-bold text-green-700 uppercase tracking-wide">Live</span>
+                  </div>
+                )}
+              </div>
 
-                <div className="w-px h-8 bg-gray-200 shrink-0" aria-hidden="true" />
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 truncate">{trackedService.operator}</p>
-                  <p className="font-semibold text-sm truncate">{trackedService.destination}</p>
+              {/* Service header */}
+              <div className="flex items-start gap-3 pb-4 mb-4 border-b border-gray-100">
+                <div
+                  style={{ backgroundColor: 'white', border: `2px solid ${getModeHex(selectedStation.type)}`, color: getModeHex(selectedStation.type) }}
+                  className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                  aria-hidden="true"
+                >
+                  {getTransportIcon(selectedStation.type, 'w-5 h-5')}
                 </div>
-
-                <div className="shrink-0 text-right">
-                  <p className="font-bold text-base">{trackedService.time}</p>
-                  {trackedService.platform !== null && (
-                    <p className="text-xs text-gray-500">
-                      {platformLabel} {trackedService.platform}
-                    </p>
-                  )}
-                </div>
-
-                <div className="shrink-0 flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-                  <span className="text-xs font-bold text-green-700 uppercase tracking-wide">Live</span>
+                <div className="min-w-0">
+                  <p className="font-bold text-base leading-tight">
+                    {trackingRoute[0]?.name ?? selectedStation.name} → {trackedService.destination}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">{trackedService.operator}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="font-bold text-sm">{trackedService.time}</span>
+                    {trackedService.platform !== null && (
+                      <span
+                        style={{ color: getModeHex(selectedStation.type), backgroundColor: `${getModeHex(selectedStation.type)}1a` }}
+                        className="text-xs font-semibold px-2 py-0.5 rounded"
+                      >
+                        {platformLabel} {trackedService.platform}
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      !trackedService.hasLiveTracking
+                        ? 'bg-gray-100 text-gray-500'
+                        : trackedService.status === 'On time'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {trackedService.hasLiveTracking ? trackedService.status : 'Scheduled'}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {/* Route timeline */}
+              {trackingRoute.length > 0 && (
+                <div>
+                  <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Full Route
+                  </h2>
+                  {trackingRoute.map((stop, idx) => {
+                    const isLast = idx === trackingRoute.length - 1;
+                    const phase: 'past' | 'vehicle' | 'upcoming' =
+                      vehicleStopIndex === -1  ? 'upcoming' :
+                      idx < vehicleStopIndex   ? 'past'     :
+                      idx === vehicleStopIndex ? 'vehicle'  : 'upcoming';
+                    const isBoarding = idx === boardingStopIndex;
+                    const isPast     = phase === 'past';
+                    const isVehicle  = phase === 'vehicle';
+
+                    const dotFillClass =
+                      isVehicle  ? 'bg-green-500 border-green-400'                                  :
+                      isBoarding ? 'bg-brand border-brand ring-2 ring-brand/25'                    :
+                      isPast     ? 'bg-gray-100 border-gray-300'                                    :
+                                   'bg-white border-gray-300';
+
+                    const nameClass =
+                      isVehicle  ? 'text-sm font-semibold text-green-700'  :
+                      isBoarding ? 'text-sm font-semibold text-brand'      :
+                      isPast     ? 'text-sm text-gray-400'                 :
+                                   'text-sm text-gray-700';
+
+                    return (
+                      <div key={idx} className="flex items-stretch gap-3">
+
+                        {/* Spine + dot */}
+                        <div className="flex flex-col items-center w-5 shrink-0">
+                          {isVehicle ? (
+                            <div className="w-4 h-4 rounded-full bg-green-500 border-2 border-green-400 animate-pulse mt-0.5 shrink-0" />
+                          ) : (
+                            <div className={`w-3 h-3 rounded-full border-2 mt-1 shrink-0 flex items-center justify-center ${dotFillClass}`}>
+                              {isPast && <span className="text-[7px] text-gray-400 leading-none">✓</span>}
+                            </div>
+                          )}
+                          {!isLast && (
+                            <div className={`w-px flex-1 my-0.5 ${isVehicle ? 'bg-green-200' : 'bg-gray-200'}`} />
+                          )}
+                        </div>
+
+                        {/* Stop name + badges */}
+                        <div className="flex-1 pb-3 flex items-start justify-between gap-2 min-w-0">
+                          <span className={nameClass}>{stop.name}</span>
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                            {isVehicle && (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                Vehicle here
+                              </span>
+                            )}
+                            {isBoarding && (
+                              <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border ${
+                                isPast
+                                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                  : 'text-brand bg-brand-light border-brand'
+                              }`}>
+                                {isPast ? 'Departed' : 'Board here'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             </div>
           )}
 
@@ -476,24 +602,14 @@ export default function DeparturesPage() {
                   : `${departures.length} departure${departures.length !== 1 ? 's' : ''} listed`}
               </div>
 
-              {/* Column header */}
-              <div className="bg-brand text-white px-4 sm:px-6 py-2.5 sticky top-0">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-semibold uppercase tracking-wide">
-                  <div>Time</div>
-                  <div>Destination</div>
-                  <div className="hidden sm:block">{platformLabel}</div>
-                  <div>Status</div>
-                </div>
-              </div>
-
-              {/* Departure rows */}
-              <ul className="divide-y list-none">
+              {/* Departure cards */}
+              <ul className="px-4 sm:px-6 py-3 space-y-2 list-none">
                 {isDeparturesLoading ? (
-                  <li className="p-6 text-center text-gray-500 text-sm">
+                  <li className="py-8 text-center text-gray-500 text-sm">
                     Loading departures…
                   </li>
                 ) : departures.length === 0 ? (
-                  <li className="p-6 text-center text-gray-500 text-sm">
+                  <li className="py-8 text-center text-gray-500 text-sm">
                     No departures found
                   </li>
                 ) : (
@@ -502,68 +618,92 @@ export default function DeparturesPage() {
                       dep.time === highlightTime &&
                       dep.operator.toLowerCase() === highlightOp;
 
-                    const rowGrid = (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 items-center">
-                        <div className="font-bold text-base">{dep.time}</div>
+                    const isBus = selectedStation!.type === 'bus';
+                    const serviceTitle = isBus
+                      ? `${dep.operator} · Heading to ${dep.destination}`
+                      : `${selectedStation!.name} to ${dep.destination}`;
 
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm truncate">{dep.destination}</p>
-                          <p className="text-xs text-gray-500 truncate">{dep.operator}</p>
-                          {/* Platform chip — mobile only */}
-                          <span className="sm:hidden inline-flex items-center mt-1 text-xs font-semibold text-brand bg-brand-light px-2 py-0.5 rounded">
-                            {dep.platform !== null ? `${platformLabel} ${dep.platform}` : 'TBA'}
-                          </span>
-                          {isYourService && (
-                            <span className="inline-flex items-center mt-1 text-xs font-bold text-brand border border-brand bg-white px-2 py-0.5 rounded-full">
-                              Your service
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Platform — desktop only */}
-                        <div className="hidden sm:block font-semibold text-brand text-sm">
-                          {dep.platform !== null ? `${platformLabel} ${dep.platform}` : '—'}
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                              dep.status === 'On time'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-orange-100 text-orange-800'
-                            }`}
-                          >
-                            {dep.status}
-                          </span>
-                          {dep.hasLiveTracking && (
-                            <span className="flex items-center gap-1 text-xs text-green-800 font-semibold">
-                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-                              LIVE
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
+                    const modeHex = getModeHex(selectedStation!.type);
+                    const statusClass = !dep.hasLiveTracking
+                      ? 'bg-gray-100 text-gray-500'
+                      : dep.status === 'On time'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-orange-100 text-orange-800';
 
                     return (
                       <li
                         key={`${dep.operator}-${dep.destination}-${dep.time}`}
                         ref={isYourService ? highlightedRowRef : undefined}
-                        className={isYourService ? 'border-l-4 border-brand bg-brand-light/60' : undefined}
                       >
-                        {dep.hasLiveTracking ? (
-                          <button
-                            onClick={() => handleTrackService(dep)}
-                            aria-label={`Track ${dep.operator} to ${dep.destination}, departs ${dep.time}, ${dep.status}`}
-                            className="w-full text-left px-4 sm:px-6 py-3 transition-colors hover:bg-brand-light cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-tint"
-                          >
-                            {rowGrid}
-                          </button>
-                        ) : (
-                          <div className="px-4 sm:px-6 py-3 transition-colors hover:bg-gray-50">
-                            {rowGrid}
+                        <button
+                          onClick={() => handleTrackService(dep)}
+                          aria-label={dep.hasLiveTracking
+                            ? `Track ${serviceTitle}, departs ${dep.time}, ${dep.status}`
+                            : `View service info: ${serviceTitle}, departs ${dep.time}, Scheduled`}
+                          title={dep.hasLiveTracking
+                            ? `Track ${serviceTitle}`
+                            : `View service info: ${serviceTitle}`}
+                          className={`w-full text-left rounded-xl border bg-white p-3.5 transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-tint ${
+                            isYourService
+                              ? 'border-brand bg-brand-light/30'
+                              : 'border-gray-200 hover:border-brand'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Mode icon */}
+                            <div
+                              style={{ backgroundColor: 'white', border: `2px solid ${modeHex}`, color: modeHex }}
+                              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            >
+                              {getTransportIcon(selectedStation!.type, 'w-4 h-4')}
+                            </div>
+
+                            {/* Main content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Destination + time */}
+                              <div className="flex items-baseline justify-between gap-3">
+                                <p className="font-bold text-base leading-tight truncate text-gray-900">
+                                  {serviceTitle}
+                                </p>
+                                <p className="font-bold text-lg shrink-0 tabular-nums text-gray-900">
+                                  {dep.time}
+                                </p>
+                              </div>
+
+                              {/* Operator + platform */}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {!isBus && <p className="text-sm text-gray-500">{dep.operator}</p>}
+                                {dep.platform !== null && (
+                                  <span
+                                    style={{ color: modeHex, backgroundColor: `${modeHex}1a` }}
+                                    className="text-xs font-semibold px-2 py-0.5 rounded"
+                                  >
+                                    {platformLabel} {dep.platform}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Status + badges */}
+                              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                                  {dep.hasLiveTracking ? dep.status : 'Scheduled'}
+                                </span>
+                                {dep.hasLiveTracking && (
+                                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                    Live
+                                  </span>
+                                )}
+                                {isYourService && (
+                                  <span className="inline-flex items-center text-xs font-bold text-brand border border-brand bg-white px-2 py-0.5 rounded-full">
+                                    Your service
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
+                        </button>
                       </li>
                     );
                   })

@@ -194,6 +194,7 @@ export default function TicketDetailPage() {
                 <button
                   onClick={() => setDisruptionOpen(v => !v)}
                   aria-expanded={disruptionOpen}
+                  title={disruptionOpen ? 'Collapse disruption details' : 'Expand disruption details'}
                   className="w-full flex items-center gap-2.5 p-3 text-left"
                 >
                   <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />

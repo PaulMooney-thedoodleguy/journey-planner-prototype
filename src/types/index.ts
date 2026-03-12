@@ -48,6 +48,7 @@ export interface Journey {
 export interface JourneySearchParams {
   from: string;
   to: string;
+  via?: string;
   date: string;
   time: string;
   ticketType: TicketType;

@@ -28,13 +28,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addSavedJourney = useCallback((j: SavedJourney) => {
     setSavedJourneys(prev => {
-      // Deduplicate: skip if same journeyData.id + date already exists
-      const duplicate = prev.find(
+      // Deduplicate: find any existing entry for the same journey + date
+      const duplicateIdx = prev.findIndex(
         existing =>
           existing.journeyData?.id === j.journeyData?.id &&
           existing.date === j.date
       );
-      if (duplicate) return prev;
+      if (duplicateIdx !== -1) {
+        // If the incoming entry carries ticket linkage (i.e. coming from completePayment)
+        // update the existing record so the ticket → journey plan link is established,
+        // even when the user bookmarked the journey before purchasing.
+        if (j.ticketId || j.ticketGroupId) {
+          const updated = prev.map((sj, idx) =>
+            idx === duplicateIdx
+              ? { ...sj, ticketId: j.ticketId, ticketGroupId: j.ticketGroupId }
+              : sj
+          );
+          saveSavedJourneys(updated);
+          return updated;
+        }
+        return prev; // true duplicate (bookmark clicked twice) — no change
+      }
       const updated = [...prev, j];
       saveSavedJourneys(updated);
       return updated;

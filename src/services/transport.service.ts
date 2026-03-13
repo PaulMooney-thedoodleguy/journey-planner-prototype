@@ -29,10 +29,9 @@ export async function getJourneyService(): Promise<IJourneyService> {
     const { MockJourneyService } = await import('./mock/journey.mock');
     return new MockJourneyService();
   }
-  // TODO: Wire up TfL + National Rail GTFS here
-  // const { TflJourneyService } = await import('./tfl/journey.tfl');
-  // return new TflJourneyService();
-  throw new Error('Real journey service not yet implemented');
+  // OTP2 + TfL — active when VITE_USE_MOCK_DATA=false
+  const { OtpJourneyService } = await import('./otp/otp-journey.service');
+  return new OtpJourneyService();
 }
 
 export async function getDeparturesService(): Promise<IDeparturesService> {

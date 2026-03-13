@@ -2,6 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MAP_STATIONS } from '../../data/stations';
 import { getTransportIcon } from '../../utils/transport';
+import type { TransportMode } from '../../types';
+
+const USE_REAL_API = import.meta.env.VITE_USE_MOCK_DATA === 'false';
+
+interface StationOption {
+  id: string | number;
+  name: string;
+  type: TransportMode;
+}
 
 interface StationAutocompleteProps {
   id: string;
@@ -15,8 +24,10 @@ interface StationAutocompleteProps {
 
 /**
  * ARIA combobox with station typeahead.
- * Filters MAP_STATIONS from 2+ characters. Full keyboard support:
- * ArrowDown/Up to navigate, Enter to select, Escape to close.
+ * Mock mode: filters MAP_STATIONS synchronously from 2+ characters.
+ * Real mode (VITE_USE_MOCK_DATA=false): calls TfL StopPoint Search API
+ * with a 300 ms debounce.
+ * Full keyboard support: ArrowDown/Up to navigate, Enter to select, Escape to close.
  * Complies with ARIA 1.2 combobox pattern (WCAG 4.1.2).
  *
  * The listbox is rendered via a portal into document.body so it is never
@@ -34,17 +45,52 @@ export default function StationAutocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [apiSuggestions, setApiSuggestions] = useState<StationOption[]>([]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filtered = value.length >= 2
-    ? MAP_STATIONS.filter(s => s.name.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
-    : [];
+  // In mock mode derive options synchronously; in real mode use debounced API state.
+  const filtered: StationOption[] = USE_REAL_API
+    ? apiSuggestions
+    : value.length >= 2
+      ? MAP_STATIONS
+          .filter(s => s.name.toLowerCase().includes(value.toLowerCase()))
+          .slice(0, 8)
+          .map(s => ({ id: s.id, name: s.name, type: s.type }))
+      : [];
 
   const shouldShowDropdown = isOpen && filtered.length > 0;
   const listboxId = `${id}-listbox`;
+
+  // Debounced TfL API search (real mode only).
+  useEffect(() => {
+    if (!USE_REAL_API) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (value.length < 2) {
+      setApiSuggestions([]);
+      return;
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const { searchStations } = await import('../../services/tfl/tfl-stop-search');
+        const results = await searchStations(value);
+        setApiSuggestions(results.map(r => ({ id: r.id, name: r.name, type: r.type })));
+        setIsOpen(true);
+      } catch {
+        setApiSuggestions([]);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [value]);
 
   // Recompute fixed position whenever the dropdown opens or the window scrolls/resizes.
   useEffect(() => {
@@ -81,7 +127,7 @@ export default function StationAutocomplete({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
-    setIsOpen(true);
+    if (!USE_REAL_API) setIsOpen(true);
     setHighlightedIndex(-1);
   };
 

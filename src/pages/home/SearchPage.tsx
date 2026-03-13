@@ -409,8 +409,10 @@ export default function SearchPage() {
         {/* Map — mobile: absolute full-screen background; desktop: fills remaining right side */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
-            markers={mapMarkers.filter(m => activeModes.has(m.type))}
+            markers={mapMarkers}
             filterModes={JOURNEY_MODES}
+            activeModes={activeModes}
+            onModeChange={setActiveModes}
             onMarkerClick={handleMapStationSelect}
             height="100%"
           />

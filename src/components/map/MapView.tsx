@@ -55,6 +55,8 @@ function stationIcon(type: TransportMode, colorOverride?: string) {
 export default function MapView({
   markers = [],
   filterModes,
+  activeModes: externalActiveModes,
+  onModeChange,
   onMarkerClick,
   height = '100%',
   center,
@@ -76,28 +78,45 @@ export default function MapView({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // Track modes the user has explicitly turned off.
-  // activeModes is derived: everything available minus user-disabled.
-  // New modes that appear (e.g. after async data loads) start ON by default.
+  // ── Controlled vs uncontrolled ──────────────────────────────────────────
+  // When activeModes + onModeChange are provided (controlled), the map filter
+  // reads and writes that external state — keeping it in sync with the panel.
+  // When not provided (uncontrolled), internal userDisabledModes is used.
+  const isControlled = externalActiveModes !== undefined;
+
   const [userDisabledModes, setUserDisabledModes] = useState<Set<TransportMode>>(new Set());
 
-  const activeModes = new Set(availableModes.filter(m => !userDisabledModes.has(m)));
-  const allActive = availableModes.length > 0 && availableModes.every(m => activeModes.has(m));
+  // effectiveActiveModes: external Set in controlled mode; derived Set otherwise
+  const effectiveActiveModes: Set<TransportMode> = isControlled
+    ? externalActiveModes
+    : new Set(availableModes.filter(m => !userDisabledModes.has(m)));
+
+  const allActive = availableModes.length > 0 && availableModes.every(m => effectiveActiveModes.has(m));
 
   const toggleMode = (mode: TransportMode) => {
-    setUserDisabledModes(prev => {
-      const next = new Set(prev);
-      if (activeModes.has(mode)) {
-        if (activeModes.size === 1) return prev; // always keep at least one mode visible
-        next.add(mode);
-      } else {
-        next.delete(mode);
-      }
-      return next;
-    });
+    const next = new Set(effectiveActiveModes);
+    if (next.has(mode)) {
+      if (next.size === 1) return; // always keep at least one mode visible
+      next.delete(mode);
+    } else {
+      next.add(mode);
+    }
+    if (isControlled) {
+      onModeChange?.(next);
+    } else {
+      setUserDisabledModes(new Set(availableModes.filter(m => !next.has(m))));
+    }
   };
 
-  const visibleMarkers = markers.filter(m => activeModes.has(m.type));
+  const handleSelectAll = () => {
+    if (isControlled) {
+      onModeChange?.(new Set(availableModes));
+    } else {
+      setUserDisabledModes(new Set());
+    }
+  };
+
+  const visibleMarkers = markers.filter(m => effectiveActiveModes.has(m.type));
 
   // Only render the filter control when there are 2+ distinct modes in the data
   const showFilter = availableModes.length > 1;
@@ -195,7 +214,7 @@ export default function MapView({
                 ? 'Close mode filter'
                 : allActive
                 ? 'Filter by transport mode'
-                : `Filter by transport mode (${activeModes.size} of ${availableModes.length} active)`
+                : `Filter by transport mode (${effectiveActiveModes.size} of ${availableModes.length} active)`
             }
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg shadow-md text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
           >
@@ -214,7 +233,7 @@ export default function MapView({
             >
               {/* All — activates every available mode */}
               <button
-                onClick={() => setUserDisabledModes(new Set())}
+                onClick={handleSelectAll}
                 aria-pressed={allActive}
                 className={`flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition ${
                   allActive
@@ -229,7 +248,7 @@ export default function MapView({
               {availableModes.map(mode => {
                 const hex = getModeHex(mode);
                 const label = MODE_CONFIG[mode as keyof typeof MODE_CONFIG]?.label ?? mode;
-                const isActive = activeModes.has(mode);
+                const isActive = effectiveActiveModes.has(mode);
 
                 return (
                   <button

@@ -187,6 +187,11 @@ export interface MapViewProps {
   /** When provided, the map filter always shows exactly these modes (instead of
    *  deriving the list from whatever marker types happen to be present). */
   filterModes?: TransportMode[];
+  /** Controlled active-mode state — when provided, map filter reads/writes this
+   *  instead of maintaining its own internal state. Use together with onModeChange
+   *  to keep the map filter in sync with an external panel filter. */
+  activeModes?: Set<TransportMode>;
+  onModeChange?: (modes: Set<TransportMode>) => void;
   routePolyline?: { lat: number; lng: number }[];
   polylines?: MapPolyline[];
   circles?: MapCircle[];

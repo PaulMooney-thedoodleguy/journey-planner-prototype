@@ -47,7 +47,14 @@ export default function ServiceUpdatesPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   usePageTitle('Service Updates');
 
-  const handleModeChange = (next: Set<TransportMode>) => setActiveModes(next);
+  const handleModeChange = (next: Set<TransportMode>) => {
+    setActiveModes(next);
+    // Clear selection if the selected disruption's mode is no longer active
+    if (selectedId !== null) {
+      const sel = disruptions.find(d => d.id === selectedId);
+      if (sel && !next.has(sel.mode ?? 'train')) setSelectedId(null);
+    }
+  };
 
   // Persist mode filter to localStorage whenever it changes
   useEffect(() => {
@@ -79,10 +86,10 @@ export default function ServiceUpdatesPage() {
     ? radiusToZoom(selectedDisruption.affectedRadius ?? 5000)
     : DEFAULT_ZOOM;
 
-  // All disruption markers filtered by active modes (used when nothing is selected).
+  // All disruption markers — mode filtering is handled by MapView via activeModes prop.
   // Icons use mode colours; severity is conveyed by the list cards, circles, and polylines.
   const allDisruptionMarkers: MapMarker[] = disruptions
-    .filter(d => d.lat != null && d.lng != null && activeModes.has(d.mode ?? 'train'))
+    .filter(d => d.lat != null && d.lng != null)
     .map(d => ({
       id:    d.id,
       lat:   d.lat!,
@@ -282,6 +289,8 @@ export default function ServiceUpdatesPage() {
           <MapView
             markers={activeMarkers}
             filterModes={DISRUPTION_MODES}
+            activeModes={activeModes}
+            onModeChange={handleModeChange}
             center={mapCenter}
             zoom={mapZoom}
             polylines={activePolylines}

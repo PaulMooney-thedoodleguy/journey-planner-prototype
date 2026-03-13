@@ -67,17 +67,6 @@ export default function SearchPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches());
   const [activeModes, setActiveModes] = useState<Set<TransportMode>>(loadSearchModes);
-  const [busMarkers, setBusMarkers] = useState<MapMarker[]>([]);
-
-  // Lazy-load all UK bus stops (separate chunk — does not block initial render)
-  useEffect(() => {
-    import('../../data/bus-stops.json').then(mod => {
-      const rows = mod.default as [string, string, number, number][];
-      setBusMarkers(rows.map(([id, name, lat, lng]) => ({
-        id, lat, lng, type: 'bus' as TransportMode, label: name,
-      })));
-    });
-  }, []);
 
   // Persist mode selection
   useEffect(() => {
@@ -420,8 +409,9 @@ export default function SearchPage() {
         {/* Map — mobile: absolute full-screen background; desktop: fills remaining right side */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
-            markers={[...mapMarkers, ...busMarkers]}
+            markers={mapMarkers}
             filterModes={JOURNEY_MODES}
+            showBusStops={activeModes.has('bus')}
             activeModes={activeModes}
             onModeChange={setActiveModes}
             onMarkerClick={handleMapStationSelect}

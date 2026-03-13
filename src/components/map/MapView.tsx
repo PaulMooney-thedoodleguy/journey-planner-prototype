@@ -1,4 +1,4 @@
-import { useState, createElement, useEffect, useRef } from 'react';
+import { useState, useCallback, createElement, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
@@ -82,6 +82,64 @@ function createModeClusterIcon(hex: string) {
       iconAnchor: [size / 2, size / 2],
     });
   };
+}
+
+/**
+ * Renders static UK bus stops from the bundled JSON, but only those
+ * currently visible in the map viewport. This keeps React renders to
+ * ~200-500 markers at a time instead of all 25K, eliminating the freeze.
+ * Stops only appear at zoom >= 12 so the cluster groups stay meaningful
+ * at city level.
+ */
+const STATIC_BUS_ZOOM = 12;
+type BusRow = [string, string, number, number]; // [id, name, lat, lng]
+
+function StaticBusStopLayer() {
+  const map = useMap();
+  const allStopsRef = useRef<BusRow[]>([]);
+  const [visibleStops, setVisibleStops] = useState<BusRow[]>([]);
+
+  const updateVisible = useCallback(() => {
+    if (map.getZoom() < STATIC_BUS_ZOOM || allStopsRef.current.length === 0) {
+      setVisibleStops([]);
+      return;
+    }
+    const bounds = map.getBounds().pad(0.3);
+    setVisibleStops(
+      allStopsRef.current.filter(([,, lat, lng]) => bounds.contains([lat, lng] as [number, number]))
+    );
+  }, [map]);
+
+  useMapEvents({ zoomend: updateVisible, moveend: updateVisible });
+
+  useEffect(() => {
+    import('../../data/bus-stops.json').then(mod => {
+      allStopsRef.current = mod.default as BusRow[];
+      updateVisible();
+    });
+  }, [updateVisible]);
+
+  const hex = getModeHex('bus');
+
+  return (
+    <MarkerClusterGroup
+      iconCreateFunction={createModeClusterIcon(hex)}
+      chunkedLoading
+      disableClusteringAtZoom={18}
+      maxClusterRadius={50}
+      showCoverageOnHover={false}
+      zoomToBoundsOnClick
+      animate
+    >
+      {visibleStops.map(([id, name, lat, lng]) => (
+        <Marker key={id} position={[lat, lng]} icon={stationIcon('bus')} title={name}>
+          <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+            <span className="font-medium text-sm">{name}</span>
+          </Tooltip>
+        </Marker>
+      ))}
+    </MarkerClusterGroup>
+  );
 }
 
 const BUS_ZOOM_THRESHOLD = 15;
@@ -171,6 +229,7 @@ export default function MapView({
   routePolyline = [],
   polylines = [],
   circles = [],
+  showBusStops = true,
 }: MapViewProps) {
   const mapCenter: [number, number] = center
     ? [center.lat, center.lng]
@@ -314,7 +373,9 @@ export default function MapView({
           />
         ))}
 
-        {/* Bus stops — only loaded when zoomed in past threshold, real API only */}
+        {/* Static bus stops — viewport-culled, mock mode only */}
+        {showBusStops && !USE_REAL_API && <StaticBusStopLayer />}
+        {/* Live bus stops from TfL API — real mode only */}
         {USE_REAL_API && <BusStopLayer />}
 
         {/* Journey route polyline (brand colour, solid) */}

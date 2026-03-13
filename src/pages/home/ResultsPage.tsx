@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, Info, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
@@ -13,7 +13,7 @@ import { getDisruptionsService } from '../../services/transport.service';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { ROUTE_STATION_COORDS } from '../../data/stations';
 import tflStops from '../../data/tfl-stops.json';
-import type { Journey, Disruption, MapMarker, TransportMode } from '../../types';
+import type { Journey, Disruption, MapMarker } from '../../types';
 
 type SortOption = 'departs' | 'fastest' | 'cheapest' | 'greenest';
 
@@ -38,19 +38,6 @@ export default function ResultsPage() {
   const { savedJourneys, addSavedJourney, removeSavedJourney } = useAppContext();
 
   const [expandedJourney, setExpandedJourney] = useState<Journey | null>(null);
-  const [busMarkers, setBusMarkers] = useState<MapMarker[]>([]);
-
-  // Lazy-load all UK bus stops (separate chunk — does not block initial render)
-  useEffect(() => {
-    import('../../data/bus-stops.json').then(mod => {
-      const rows = mod.default as [string, string, number, number][];
-      setBusMarkers(rows.map(([id, name, lat, lng]) => ({
-        id, lat, lng, type: 'bus' as TransportMode, label: name,
-      })));
-    });
-  }, []);
-
-  const allStopMarkers = useMemo(() => [...mapMarkers, ...busMarkers], [busMarkers]);
 
   const getSavedId = (j: Journey): string | undefined =>
     savedJourneys.find(sj => sj.journeyData?.id === j.id && sj.date === searchParams.date)?.id;
@@ -339,7 +326,8 @@ export default function ResultsPage() {
             When a journey is expanded, FitBounds inside MapView handles centering. */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
-            markers={expandedJourney ? routeMarkers : allStopMarkers}
+            markers={expandedJourney ? routeMarkers : mapMarkers}
+            showBusStops={!expandedJourney}
             center={expandedJourney ? undefined : mapCenter}
             routePolyline={routePolyline}
             height="100%"

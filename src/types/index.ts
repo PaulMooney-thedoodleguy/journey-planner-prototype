@@ -204,6 +204,8 @@ export interface MapViewProps {
   vehicleMarker?: { lat: number; lng: number; direction?: number };
   onMarkerClick?: (id: string | number) => void;
   height?: string;
+  /** When true (default), renders the static UK bus stop layer with viewport culling. */
+  showBusStops?: boolean;
 }
 
 // ─── Passenger form ───────────────────────────────────────────

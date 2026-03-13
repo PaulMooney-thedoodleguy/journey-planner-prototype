@@ -10,7 +10,7 @@ import StationAutocomplete from '../../components/journey/StationAutocomplete';
 import OutlinedField from '../../components/ui/OutlinedField';
 import ModeFilter from '../../components/ui/ModeFilter';
 import SavedJourneyCard from '../../components/journey/SavedJourneyCard';
-import { MAP_STATIONS } from '../../data/stations';
+import tflStops from '../../data/tfl-stops.json';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../../utils/recentSearches';
 import type { JourneySearchParams, MapMarker, PassengerType, TransportMode } from '../../types';
@@ -27,11 +27,11 @@ import type { JourneySearchParams, MapMarker, PassengerType, TransportMode } fro
  * the lg:flex container; the map fills the remaining right side.
  */
 
-const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
+const mapMarkers: MapMarker[] = tflStops.map(s => ({
   id: s.id,
-  lat: s.lat ?? 51.515,
-  lng: s.lng ?? -0.13,
-  type: s.type,
+  lat: s.lat,
+  lng: s.lng,
+  type: s.type as import('../../types').TransportMode,
   label: s.name,
 }));
 
@@ -112,7 +112,7 @@ export default function SearchPage() {
   // Map is always visible behind the drawer — no showMap guard needed.
   // Tapping a station marker populates the "To" field.
   const handleMapStationSelect = (stationId: string | number) => {
-    const station = MAP_STATIONS.find(s => s.id === stationId);
+    const station = tflStops.find(s => s.id === stationId);
     if (station) updateField('to', station.name);
   };
 

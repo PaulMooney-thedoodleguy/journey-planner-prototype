@@ -11,7 +11,8 @@ import MapView from '../../components/map/MapView';
 import { getDurationMins, getRoutePolyline } from '../../utils/transport';
 import { getDisruptionsService } from '../../services/transport.service';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import { MAP_STATIONS, ROUTE_STATION_COORDS } from '../../data/stations';
+import { ROUTE_STATION_COORDS } from '../../data/stations';
+import tflStops from '../../data/tfl-stops.json';
 import type { Journey, Disruption, MapMarker } from '../../types';
 
 type SortOption = 'departs' | 'fastest' | 'cheapest' | 'greenest';
@@ -23,11 +24,11 @@ const SORT_LABELS: Record<SortOption, string> = {
   greenest: 'Greenest',
 };
 
-const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
+const mapMarkers: MapMarker[] = tflStops.map(s => ({
   id: s.id,
-  lat: s.lat ?? 51.515,
-  lng: s.lng ?? -0.13,
-  type: s.type,
+  lat: s.lat,
+  lng: s.lng,
+  type: s.type as import('./../../types').TransportMode,
   label: s.name,
 }));
 
@@ -149,7 +150,7 @@ export default function ResultsPage() {
     : '';
 
   // Centre the map on the origin station when coordinates are available
-  const originStation = MAP_STATIONS.find(
+  const originStation = tflStops.find(
     s => s.name.toLowerCase() === searchParams.from.toLowerCase()
   );
   const mapCenter = originStation?.lat != null && originStation?.lng != null

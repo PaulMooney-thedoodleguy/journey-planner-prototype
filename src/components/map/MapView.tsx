@@ -1,7 +1,7 @@
-import { useState, createElement, useEffect } from 'react';
+import { useState, createElement, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
@@ -50,6 +50,78 @@ function stationIcon(type: TransportMode, colorOverride?: string) {
   });
   _iconCache.set(cacheKey, icon);
   return icon;
+}
+
+const BUS_ZOOM_THRESHOLD = 15;
+const USE_REAL_API = import.meta.env.VITE_USE_MOCK_DATA === 'false';
+
+/**
+ * Fetches TfL bus stops around the current map centre when the user zooms
+ * in past BUS_ZOOM_THRESHOLD. Results are accumulated as the map is panned
+ * and cached by snapped grid cell to avoid duplicate requests.
+ * Only active when VITE_USE_MOCK_DATA=false.
+ */
+function BusStopLayer() {
+  const [busMarkers, setBusMarkers] = useState<{ id: string; lat: number; lng: number; label: string }[]>([]);
+  const fetchedCells = useRef(new Set<string>());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchAround = (map: L.Map) => {
+    if (map.getZoom() < BUS_ZOOM_THRESHOLD) {
+      setBusMarkers([]);
+      fetchedCells.current.clear();
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const { lat, lng } = map.getCenter();
+      const cellKey = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+      if (fetchedCells.current.has(cellKey)) return;
+      fetchedCells.current.add(cellKey);
+      const apiKey = import.meta.env.VITE_TFL_API_KEY ?? '';
+      fetch(
+        `https://api.tfl.gov.uk/StopPoint?modes=bus&radius=800&lat=${lat}&lon=${lng}` +
+        `&stopTypes=NaptanPublicBusCoachTram&app_key=${apiKey}`
+      )
+        .then(r => r.json())
+        .then((data: { stopPoints?: { naptanId: string; commonName: string; lat: number; lon: number }[] }) => {
+          const incoming = (data.stopPoints ?? [])
+            .filter(s => s.lat && s.lon)
+            .map(s => ({ id: s.naptanId, lat: s.lat, lng: s.lon, label: s.commonName }));
+          setBusMarkers(prev => {
+            const seen = new Set(prev.map(s => s.id));
+            const fresh = incoming.filter(s => !seen.has(s.id));
+            return fresh.length > 0 ? [...prev, ...fresh] : prev;
+          });
+        })
+        .catch(() => {});
+    }, 400);
+  };
+
+  const map = useMapEvents({
+    zoomend() { fetchAround(map); },
+    moveend()  { fetchAround(map); },
+  });
+
+  // Run once on mount in case the map starts zoomed in
+  useEffect(() => { fetchAround(map); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      {busMarkers.map(m => (
+        <Marker
+          key={m.id}
+          position={[m.lat, m.lng]}
+          icon={stationIcon('bus')}
+          title={m.label}
+        >
+          <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+            <span className="font-medium text-sm">{m.label}</span>
+          </Tooltip>
+        </Marker>
+      ))}
+    </>
+  );
 }
 
 export default function MapView({
@@ -185,6 +257,9 @@ export default function MapView({
             }}
           />
         ))}
+
+        {/* Bus stops — only loaded when zoomed in past threshold, real API only */}
+        {USE_REAL_API && <BusStopLayer />}
 
         {/* Journey route polyline (brand colour, solid) */}
         {routePolyline.length >= 2 ? (

@@ -11,6 +11,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/__tests__/**/*.{test,spec}.{ts,tsx}'],  // exclude e2e/ Playwright specs
     css: false,          // Skip CSS processing — faster and irrelevant for logic tests
+    env: { VITE_USE_MOCK_DATA: 'true' },  // always use mock data in tests regardless of .env
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

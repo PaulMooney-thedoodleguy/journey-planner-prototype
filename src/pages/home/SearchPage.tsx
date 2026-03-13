@@ -410,6 +410,7 @@ export default function SearchPage() {
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
             markers={mapMarkers.filter(m => activeModes.has(m.type))}
+            filterModes={JOURNEY_MODES}
             onMarkerClick={handleMapStationSelect}
             height="100%"
           />

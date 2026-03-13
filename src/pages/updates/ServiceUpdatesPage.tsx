@@ -79,7 +79,8 @@ export default function ServiceUpdatesPage() {
     ? radiusToZoom(selectedDisruption.affectedRadius ?? 5000)
     : DEFAULT_ZOOM;
 
-  // All disruption markers filtered by active modes (used when nothing is selected)
+  // All disruption markers filtered by active modes (used when nothing is selected).
+  // Icons use mode colours; severity is conveyed by the list cards, circles, and polylines.
   const allDisruptionMarkers: MapMarker[] = disruptions
     .filter(d => d.lat != null && d.lng != null && activeModes.has(d.mode ?? 'train'))
     .map(d => ({
@@ -88,20 +89,18 @@ export default function ServiceUpdatesPage() {
       lng:   d.lng!,
       type:  d.mode ?? 'train',
       label: d.title,
-      color: getSeverityHex(d.severity),
     }));
 
   // When a disruption is selected, show affected-stop markers + the main pin
   const activeMarkers: MapMarker[] = selectedDisruption
     ? [
-        // Affected stop markers (smaller visual, same severity colour)
+        // Affected stop markers
         ...(selectedDisruption.affectedStops ?? []).map(s => ({
           id:    `stop-${selectedDisruption.id}-${s.name}`,
           lat:   s.lat,
           lng:   s.lng,
           type:  selectedDisruption.mode ?? 'train' as const,
           label: s.name,
-          color: getSeverityHex(selectedDisruption.severity),
         })),
         // Keep the main disruption pin too (so it stays visible)
         ...(selectedDisruption.lat != null ? [{
@@ -110,7 +109,6 @@ export default function ServiceUpdatesPage() {
           lng:   selectedDisruption.lng!,
           type:  selectedDisruption.mode ?? 'train' as const,
           label: selectedDisruption.title,
-          color: getSeverityHex(selectedDisruption.severity),
         }] : []),
       ]
     : allDisruptionMarkers;
@@ -178,25 +176,29 @@ export default function ServiceUpdatesPage() {
             />
 
             {/* Severity filter */}
-            <div
-              role="group"
-              aria-label="Filter by severity"
-              className="flex gap-2 flex-wrap mb-3"
-            >
-              {SEVERITIES.map(sev => (
-                <button
-                  key={sev}
-                  onClick={() => setSeverity(sev)}
-                  aria-pressed={severity === sev}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${severityButtonClass(sev)}`}
-                >
-                  {sev.charAt(0).toUpperCase() + sev.slice(1)}
-                </button>
-              ))}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Severity</p>
+              <div
+                role="group"
+                aria-label="Filter by severity"
+                className="flex gap-2 flex-wrap"
+              >
+                {SEVERITIES.map(sev => (
+                  <button
+                    key={sev}
+                    onClick={() => setSeverity(sev)}
+                    aria-pressed={severity === sev}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition border ${severityButtonClass(sev)}`}
+                  >
+                    {sev.charAt(0).toUpperCase() + sev.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Mode filter */}
             <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mode</p>
               <ModeFilter
                 availableModes={DISRUPTION_MODES}
                 activeModes={activeModes}
@@ -279,6 +281,7 @@ export default function ServiceUpdatesPage() {
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
             markers={activeMarkers}
+            filterModes={DISRUPTION_MODES}
             center={mapCenter}
             zoom={mapZoom}
             polylines={activePolylines}

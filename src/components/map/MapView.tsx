@@ -54,6 +54,7 @@ function stationIcon(type: TransportMode, colorOverride?: string) {
 
 export default function MapView({
   markers = [],
+  filterModes,
   onMarkerClick,
   height = '100%',
   center,
@@ -66,8 +67,9 @@ export default function MapView({
     ? [center.lat, center.lng]
     : [51.515, -0.13];
 
-  // Derive unique transport modes from markers in first-seen order
-  const availableModes = markers.reduce<TransportMode[]>((acc, m) => {
+  // When filterModes is provided, always show those modes in the filter UI.
+  // Otherwise derive from whichever types are present in the marker data.
+  const availableModes: TransportMode[] = filterModes ?? markers.reduce<TransportMode[]>((acc, m) => {
     if (!acc.includes(m.type)) acc.push(m.type);
     return acc;
   }, []);

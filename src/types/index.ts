@@ -184,6 +184,9 @@ export interface MapViewProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   markers?: MapMarker[];
+  /** When provided, the map filter always shows exactly these modes (instead of
+   *  deriving the list from whatever marker types happen to be present). */
+  filterModes?: TransportMode[];
   routePolyline?: { lat: number; lng: number }[];
   polylines?: MapPolyline[];
   circles?: MapCircle[];

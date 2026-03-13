@@ -109,13 +109,6 @@ export default function SearchPage() {
     setRecentSearches(getRecentSearches());
   };
 
-  // Map is always visible behind the drawer — no showMap guard needed.
-  // Tapping a station marker populates the "To" field.
-  const handleMapStationSelect = (stationId: string | number) => {
-    const station = tflStops.find(s => s.id === stationId);
-    if (station) updateField('to', station.name);
-  };
-
   const handleSearch = async () => {
     const errors: Record<string, string> = {};
     if (!localParams.from.trim()) errors.from = 'Please enter a departure location';
@@ -414,7 +407,8 @@ export default function SearchPage() {
             showBusStops={activeModes.has('bus')}
             activeModes={activeModes}
             onModeChange={setActiveModes}
-            onMarkerClick={handleMapStationSelect}
+            onSetDestination={(name) => updateField('to', name)}
+            onViewDepartures={(id) => navigate(`/departures/${id}`)}
             height="100%"
           />
         </div>

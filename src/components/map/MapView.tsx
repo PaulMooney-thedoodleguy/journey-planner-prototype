@@ -1,7 +1,7 @@
 import { useState, useCallback, createElement, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet.markercluster';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { SlidersHorizontal, X, ZoomIn } from 'lucide-react';
@@ -94,7 +94,10 @@ function createModeClusterIcon(hex: string) {
 const STATIC_BUS_ZOOM = 15; // Only render at street level — keeps viewport count to ~50 stops
 type BusRow = [string, string, number, number]; // [id, name, lat, lng]
 
-function StaticBusStopLayer() {
+function StaticBusStopLayer({ onSetDestination, onViewDepartures }: {
+  onSetDestination?: (name: string) => void;
+  onViewDepartures?: (id: string | number) => void;
+}) {
   const map = useMap();
   const allStopsRef = useRef<BusRow[]>([]);
   const [visibleStops, setVisibleStops] = useState<BusRow[]>([]);
@@ -136,13 +139,75 @@ function StaticBusStopLayer() {
       animate
     >
       {visibleStops.map(([id, name, lat, lng]) => (
-        <Marker key={id} position={[lat, lng]} icon={stationIcon('bus')} title={name}>
-          <Tooltip direction="top" offset={[0, -20]} opacity={1}>
-            <span className="font-medium text-sm">{name}</span>
-          </Tooltip>
+        <Marker
+          key={id}
+          position={[lat, lng]}
+          icon={stationIcon('bus')}
+          title={name}
+        >
+          <Popup>
+            <StopPopupContent
+              id={id}
+              name={name}
+              type="bus"
+              onSetDestination={onSetDestination}
+              onViewDepartures={onViewDepartures}
+            />
+          </Popup>
         </Marker>
       ))}
     </MarkerClusterGroup>
+  );
+}
+
+/**
+ * Popup body rendered when a stop marker is clicked.
+ * Uses inline styles so Leaflet's CSS doesn't interfere with Tailwind classes.
+ * Closes the popup before firing the action callback so the map feels responsive.
+ */
+function StopPopupContent({
+  id, name, type, onSetDestination, onViewDepartures,
+}: {
+  id: string | number;
+  name: string;
+  type: TransportMode;
+  onSetDestination?: (name: string) => void;
+  onViewDepartures?: (id: string | number) => void;
+}) {
+  const map = useMap();
+  const hex = getModeHex(type);
+  const btnBase: React.CSSProperties = {
+    display: 'block', width: '100%', padding: '7px 12px',
+    borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+    cursor: 'pointer', textAlign: 'center', border: 'none',
+  };
+  return (
+    <div style={{ minWidth: '190px', fontFamily: 'inherit' }}>
+      <p style={{ fontWeight: 700, fontSize: '14px', color: '#111827', marginBottom: '2px', lineHeight: 1.3 }}>{name}</p>
+      <p style={{ fontSize: '11px', color: hex, fontWeight: 600, textTransform: 'capitalize', marginBottom: '10px' }}>
+        {type} stop
+      </p>
+      {(onSetDestination || onViewDepartures) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {onSetDestination && (
+            <button
+              style={{ ...btnBase, backgroundColor: '#4E5866', color: 'white' }}
+              onClick={() => { map.closePopup(); onSetDestination(name); }}
+            >
+              Set as destination
+            </button>
+          )}
+          {onViewDepartures && (
+            <button
+              style={{ ...btnBase, backgroundColor: 'white', color: '#4E5866', border: '2px solid #4E5866' }}
+              onClick={() => { map.closePopup(); onViewDepartures(id); }}
+            >
+              View departures
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -162,7 +227,10 @@ const USE_REAL_API = import.meta.env.VITE_USE_MOCK_DATA === 'false';
  * and cached by snapped grid cell to avoid duplicate requests.
  * Only active when VITE_USE_MOCK_DATA=false.
  */
-function BusStopLayer() {
+function BusStopLayer({ onSetDestination, onViewDepartures }: {
+  onSetDestination?: (name: string) => void;
+  onViewDepartures?: (id: string | number) => void;
+}) {
   const [busMarkers, setBusMarkers] = useState<{ id: string; lat: number; lng: number; label: string }[]>([]);
   const fetchedCells = useRef(new Set<string>());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -219,9 +287,15 @@ function BusStopLayer() {
     >
       {busMarkers.map(m => (
         <Marker key={m.id} position={[m.lat, m.lng]} icon={stationIcon('bus')} title={m.label}>
-          <Tooltip direction="top" offset={[0, -20]} opacity={1}>
-            <span className="font-medium text-sm">{m.label}</span>
-          </Tooltip>
+          <Popup>
+            <StopPopupContent
+              id={m.id}
+              name={m.label}
+              type="bus"
+              onSetDestination={onSetDestination}
+              onViewDepartures={onViewDepartures}
+            />
+          </Popup>
         </Marker>
       ))}
     </MarkerClusterGroup>
@@ -234,6 +308,8 @@ export default function MapView({
   activeModes: externalActiveModes,
   onModeChange,
   onMarkerClick,
+  onSetDestination,
+  onViewDepartures,
   height = '100%',
   center,
   zoom,
@@ -363,14 +439,15 @@ export default function MapView({
                   eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
                 >
                   {m.label && (
-                    <>
-                      <Tooltip direction="top" offset={[0, -20]} opacity={1}>
-                        <span className="font-medium text-sm">{m.label}</span>
-                      </Tooltip>
-                      <Popup>
-                        <span className="font-medium text-sm">{m.label}</span>
-                      </Popup>
-                    </>
+                    <Popup>
+                      <StopPopupContent
+                        id={m.id}
+                        name={m.label}
+                        type={m.type as TransportMode}
+                        onSetDestination={onSetDestination}
+                        onViewDepartures={onViewDepartures}
+                      />
+                    </Popup>
                   )}
                 </Marker>
               ))}
@@ -411,9 +488,9 @@ export default function MapView({
         {/* Dismiss zoom toast once user reaches the bus stop threshold */}
         <ZoomWatcher onZoom={handleZoomForToast} />
         {/* Static bus stops — viewport-culled, always shown */}
-        {showBusStops && <StaticBusStopLayer />}
+        {showBusStops && <StaticBusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} />}
         {/* Live bus stops from TfL API — augments static layer at close zoom */}
-        {USE_REAL_API && <BusStopLayer />}
+        {USE_REAL_API && <BusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} />}
 
         {/* Journey route polyline (brand colour, solid) */}
         {routePolyline.length >= 2 ? (

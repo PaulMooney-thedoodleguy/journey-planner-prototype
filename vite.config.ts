@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       injectRegister: 'auto',
-      includeAssets: ['icon-192.svg', 'icon-512.svg'],
+      includeAssets: ['favicon.svg', 'icon-192.svg', 'icon-512.svg'],
       manifest: {
         name: 'navIQuate',
         short_name: 'navIQuate',

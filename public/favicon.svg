@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#4E5866"/>
+  <text
+    x="16" y="16"
+    dominant-baseline="central"
+    text-anchor="middle"
+    font-family="'Arial Black', Arial, sans-serif"
+    font-weight="900"
+    font-size="18"
+    fill="#54BF8A"
+  >IQ</text>
+</svg>

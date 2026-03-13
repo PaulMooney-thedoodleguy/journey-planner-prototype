@@ -11,7 +11,19 @@ import type { Disruption, MapMarker, MapPolyline, MapCircle, Severity, Transport
 const SEVERITIES: Array<'all' | Severity> = ['all', 'critical', 'high', 'medium', 'low'];
 
 const DISRUPTION_MODES: TransportMode[] = ['train', 'tube', 'bus', 'tram', 'ferry'];
-const ALL_MODES = new Set<TransportMode>(DISRUPTION_MODES);
+const STORAGE_KEY = 'updates-active-modes';
+
+function loadActiveModes(): Set<TransportMode> {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const arr = JSON.parse(stored) as TransportMode[];
+      const valid = arr.filter(m => DISRUPTION_MODES.includes(m));
+      if (valid.length > 0) return new Set(valid);
+    }
+  } catch { /* ignore */ }
+  return new Set<TransportMode>(DISRUPTION_MODES);
+}
 
 // Zoom out enough to show England when no disruption is selected
 const DEFAULT_CENTER = { lat: 52.5, lng: -1.5 };
@@ -30,7 +42,7 @@ export default function ServiceUpdatesPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<'all' | Severity>('all');
-  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(ALL_MODES);
+  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(loadActiveModes);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   usePageTitle('Service Updates');
 
@@ -46,6 +58,11 @@ export default function ServiceUpdatesPage() {
       return next;
     });
   };
+
+  // Persist mode filter to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...activeModes]));
+  }, [activeModes]);
 
   useEffect(() => {
     getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));

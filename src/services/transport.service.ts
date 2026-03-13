@@ -10,7 +10,7 @@ export interface IJourneyService {
 
 export interface IDeparturesService {
   getNearbyStations(): Promise<Station[]>;
-  getDepartures(stationId: number): Promise<Departure[]>;
+  getDepartures(stationId: string | number): Promise<Departure[]>;
 }
 
 export interface IDisruptionsService {
@@ -39,8 +39,8 @@ export async function getDeparturesService(): Promise<IDeparturesService> {
     const { MockDeparturesService } = await import('./mock/departures.mock');
     return new MockDeparturesService();
   }
-  // TODO: Wire up TfL real-time departures here
-  throw new Error('Real departures service not yet implemented');
+  const { TflDeparturesService } = await import('./tfl/tfl-departures.service');
+  return new TflDeparturesService();
 }
 
 export async function getDisruptionsService(): Promise<IDisruptionsService> {

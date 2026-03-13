@@ -103,7 +103,7 @@ export interface SavedJourney {
 // ─── Stations & departures ────────────────────────────────────
 
 export interface Station {
-  id: number;
+  id: string | number;
   name: string;
   type: TransportMode;
   distance?: string;
@@ -120,6 +120,8 @@ export interface Departure {
   hasLiveTracking: boolean;
   vehiclePosition?: { lat: number; lng: number };
   direction?: string;
+  /** TfL machine-readable line ID (e.g. "central", "73"). Present in real mode only. */
+  lineId?: string;
 }
 
 export interface RouteStop {
@@ -203,6 +205,18 @@ export interface MapViewProps {
   circles?: MapCircle[];
   vehicleMarker?: { lat: number; lng: number; direction?: number };
   onMarkerClick?: (id: string | number) => void;
+  /** Called when the user clicks "Set as destination" inside a stop popup. */
+  onSetDestination?: (name: string) => void;
+  /** Called when the user clicks "View departures" inside a stop popup.
+   *  name and type are the stop's display label and transport mode — always
+   *  provided so callers can construct a Station even for stops not in any
+   *  local JSON lookup (e.g. bus stops from bus-stops.json). */
+  onViewDepartures?: (id: string | number, name?: string, type?: TransportMode) => void;
+  /** Called on map moveend with the new centre coordinates. */
+  onCenterChange?: (center: { lat: number; lng: number }) => void;
+  /** When false, marker popups are suppressed and clicks fire callbacks directly.
+   *  Defaults to true. Set false on the Departures map. */
+  showPopups?: boolean;
   height?: string;
   /** When true (default), renders the static UK bus stop layer with viewport culling. */
   showBusStops?: boolean;

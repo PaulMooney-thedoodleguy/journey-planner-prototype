@@ -26,7 +26,7 @@ function normalizeStation(s: string) {
   return s.toLowerCase().replace(/\b(london|station|bus stop|coach)\b/g, '').trim();
 }
 
-function findDepartureStationId(from: string): number | null {
+function findDepartureStationId(from: string): string | number | null {
   const key = normalizeStation(from);
   return MAP_STATIONS.find(s => {
     const n = normalizeStation(s.name);

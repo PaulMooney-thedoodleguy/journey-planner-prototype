@@ -10,8 +10,9 @@ import BottomDrawer from '../../components/layout/BottomDrawer';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
 import { MOCK_DEPARTURES, getServiceRoute, getRouteTimetable } from '../../data/departures';
 import { MAP_STATIONS } from '../../data/stations';
+import tflStops from '../../data/tfl-stops.json';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { MapMarker, Station, Departure } from '../../types';
+import type { MapMarker, Station, Departure, TransportMode, RouteStop, RouteTimetable, TimetableStop } from '../../types';
 
 /*
  * Z-index stacking order on this page:
@@ -25,6 +26,139 @@ import type { MapMarker, Station, Departure } from '../../types';
  */
 
 type DepartureView = 'stations' | 'board' | 'tracking' | 'timetable';
+
+// ── TfL Timetable API types ───────────────────────────────────────────────────
+
+interface TflTimetableInterval { stopId: string; timeToArrival: number; }
+interface TflTimetableResponse {
+  timetable?: {
+    routes?: Array<{ stationIntervals: Array<{ id: string; intervals: TflTimetableInterval[] }> }>;
+    // TfL uses arbitrary keys (period/day codes) — never rely on "All"
+    departures?: Record<string, Array<{ stationIntervalId: string; time: string }>>;
+  };
+  stations?: Array<{ id: string; name: string }>;
+}
+
+// TfL canonical line IDs used by Route/Sequence and Timetable endpoints.
+// Some lines (e.g. Elizabeth line) return a hex UUID as lineId in the Arrivals
+// API, which those endpoints reject. We map the human-readable lineName instead.
+const TFL_LINE_ID_MAP: Record<string, string> = {
+  'elizabeth line':       'elizabeth-line',
+  'london overground':    'overground',
+  'tfl rail':             'elizabeth-line',
+  'bakerloo':             'bakerloo',
+  'central':              'central',
+  'circle':               'circle',
+  'district':             'district',
+  'hammersmith & city':   'hammersmith-city',
+  'jubilee':              'jubilee',
+  'metropolitan':         'metropolitan',
+  'northern':             'northern',
+  'piccadilly':           'piccadilly',
+  'victoria':             'victoria',
+  'waterloo & city':      'waterloo-city',
+  'dlr':                  'dlr',
+};
+
+/** Returns the canonical TfL line ID safe to use with Route/Sequence and Timetable. */
+function canonicalLineId(lineId: string, operator: string): string {
+  // Hex-only strings of 12+ chars are internal UUIDs — derive from line name instead
+  if (/^[0-9a-f]{12,}$/i.test(lineId)) {
+    const key = operator.toLowerCase();
+    return TFL_LINE_ID_MAP[key] ?? key.replace(/\s+/g, '-').replace(/&/g, 'and');
+  }
+  return lineId;
+}
+
+function stripStationSuffix(name: string): string {
+  return name
+    .replace(/ Underground Station$/i, '')
+    .replace(/ (Rail|DLR|Overground) Station$/i, '')
+    .replace(/ Station$/i, '');
+}
+
+function ttMins(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function ttAdd(t: string, mins: number): string {
+  const total = ttMins(t) + Math.round(mins);
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// Secondary name lookup: NaPTAN id → human-readable name from local tfl-stops.json.
+// Covers stops that TfL's Timetable API omits from its own stations[] array.
+const TFLSTOPS_NAME = new Map(tflStops.map(s => [s.id as string, s.name]));
+
+// TfL's /Timetable endpoint returns stationIntervals (time offsets between stops)
+// but the departures dictionary is always empty. We compute times from the live
+// prediction time at the boarding stop + the offset delta for each route stop.
+function buildTflTimetable(
+  ttData: TflTimetableResponse,
+  route: RouteStop[],
+  selectedTime: string,   // live predicted arrival at boarding stop
+  boardingName: string,
+): { timetable: RouteTimetable; stopTimes: string[] } {
+  const empty = { timetable: { stopNames: [], departureTimes: [], stops: [], selectedServiceIndex: 0 }, stopTimes: route.map(() => '') };
+
+  const stationIntervalSets = ttData.timetable?.routes?.[0]?.stationIntervals ?? [];
+  console.debug('[TfL Timetable] interval sets:', stationIntervalSets.length, '| departures keys:', Object.keys(ttData.timetable?.departures ?? {}));
+  if (stationIntervalSets.length === 0) return empty;
+
+  const stationsMap = new Map((ttData.stations ?? []).map(s => [s.id, stripStationSuffix(s.name)]));
+  const boardingLower = boardingName.toLowerCase();
+
+  // Pick the interval set that contains the boarding stop (fall back to first)
+  const bestSet = stationIntervalSets.find(si =>
+    si.intervals.some(iv => {
+      const name = (stationsMap.get(iv.stopId) ?? '').toLowerCase();
+      return name.includes(boardingLower) || boardingLower.includes(name);
+    })
+  ) ?? stationIntervalSets[0];
+
+  const ttStops = bestSet.intervals.map(iv => ({
+    name: stationsMap.get(iv.stopId) ?? TFLSTOPS_NAME.get(iv.stopId) ?? stripStationSuffix(iv.stopId),
+    offsetMins: iv.timeToArrival,
+  }));
+  if (ttStops.length === 0) return empty;
+
+  // Time offset of the boarding stop (0 if stop is the first/origin stop)
+  const boardingOffset = ttStops.find(s => {
+    const sn = s.name.toLowerCase();
+    return sn.includes(boardingLower) || boardingLower.includes(sn);
+  })?.offsetMins ?? 0;
+
+  // Each stop's scheduled time = live prediction at boarding + (stopOffset - boardingOffset)
+  const stops: TimetableStop[] = ttStops.map(s => ({
+    name: s.name,
+    times: [ttAdd(selectedTime, s.offsetMins - boardingOffset)],
+  }));
+
+  // Route timeline: try to match each route stop to a timetable stop by name
+  const stopTimes = route.map(rs => {
+    const rn = rs.name.toLowerCase();
+    const match = ttStops.find(s => {
+      const sn = s.name.toLowerCase();
+      return sn === rn || sn.includes(rn) || rn.includes(sn);
+    });
+    return match !== undefined ? ttAdd(selectedTime, match.offsetMins - boardingOffset) : '';
+  });
+
+  console.debug('[TfL Timetable] stops:', ttStops.length, '| boardingOffset:', boardingOffset, '| stopTimes with data:', stopTimes.filter(Boolean).length);
+
+  return {
+    timetable: {
+      stopNames: ttStops.map(s => s.name),
+      departureTimes: [ttAdd(selectedTime, (ttStops[0]?.offsetMins ?? 0) - boardingOffset)],
+      stops,
+      selectedServiceIndex: 0,
+    },
+    stopTimes,
+  };
+}
 
 // Three-position drawer for stations and departure board views.
 const DEPARTURES_SNAP_POINTS = [
@@ -59,6 +193,7 @@ export default function DeparturesPage() {
     setSelectedStation,
     departures,
     isDeparturesLoading,
+    departuresError,
     trackedService,
     setTrackedService,
   } = useDeparturesContext();
@@ -149,9 +284,14 @@ export default function DeparturesPage() {
   // Avoids re-hydrating on every context update after the first mount.
   useEffect(() => {
     if (hydratedRef.current) return;
-    if (!stationId || nearbyStations.length === 0) return;
+    if (!stationId) return;
 
-    const station = nearbyStations.find(s => s.id === Number(stationId));
+    const station: Station | undefined =
+      nearbyStations.find(s => String(s.id) === stationId) ??
+      (() => {
+        const t = tflStops.find(s => String(s.id) === stationId);
+        return t ? { id: t.id, name: t.name, type: t.type as TransportMode, lat: t.lat, lng: t.lng } : undefined;
+      })();
     if (!station) return;
 
     hydratedRef.current = true;
@@ -181,14 +321,17 @@ export default function DeparturesPage() {
   // ── Station selection ─────────────────────────────────────────────────────
 
   const handleSelectStation = async (station: Station) => {
-    await setSelectedStation(station);
+    try {
+      await setSelectedStation(station);
+    } catch {
+      // error is stored in context's departuresError; still switch to board
+    }
     setView('board');
     navigate(`/departures/${station.id}`);
   };
 
   const handleMarkerClick = (id: string | number) => {
-    const station = nearbyStations.find(s => s.id === id);
-    if (station) handleSelectStation(station);
+    handleViewDepartures(id);
   };
 
   // ── Back to stations ──────────────────────────────────────────────────────
@@ -225,39 +368,195 @@ export default function DeparturesPage() {
 
   // ── Map markers ───────────────────────────────────────────────────────────
 
-  const stationMarkers: MapMarker[] = nearbyStations
-    .filter((s): s is Station & { lat: number; lng: number } =>
-      s.lat !== undefined && s.lng !== undefined
-    )
-    .map(s => ({
-      id: s.id,
-      lat: s.lat,
-      lng: s.lng,
-      type: s.type,
-      label: s.name,
-    }));
+  const allStopMarkers: MapMarker[] = tflStops.map(s => ({
+    id: s.id,
+    lat: s.lat,
+    lng: s.lng,
+    type: s.type as TransportMode,
+    label: s.name,
+  }));
 
-  // ── Tracking map data ─────────────────────────────────────────────────────
+  // ── Map-centre-aware station list ─────────────────────────────────────────
+  // Updated on map moveend via onCenterChange; derives the 12 nearest TfL
+  // stops from tflStops.json so the list always reflects the visible map area.
 
-  const trackingRoute =
-    trackedService && (view === 'tracking' || view === 'timetable')
-      ? getServiceRoute(trackedService.operator, trackedService.destination)
-      : [];
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 51.515, lng: -0.13 });
+
+  const nearbyFromMap = useMemo<Station[]>(() => {
+    const { lat: cLat, lng: cLng } = mapCenter;
+    return [...tflStops]
+      .map(s => ({ s, d2: (s.lat - cLat) ** 2 + (s.lng - cLng) ** 2 }))
+      .sort((a, b) => a.d2 - b.d2)
+      .slice(0, 12)
+      .map(({ s }) => ({ id: s.id, name: s.name, type: s.type as TransportMode, lat: s.lat, lng: s.lng }));
+  }, [mapCenter]);
+
+  // ── View departures handler ───────────────────────────────────────────────
+  // Receives id from onMarkerClick, and id+name+type from popup onViewDepartures.
+  // Falls back to constructing a minimal Station when the ID isn't in any
+  // local JSON (e.g. bus stops from bus-stops.json / live TfL bus layer).
+
+  const handleViewDepartures = (id: string | number, name?: string, type?: TransportMode) => {
+    const fromNearby = nearbyStations.find(s => String(s.id) === String(id));
+    if (fromNearby) { handleSelectStation(fromNearby); return; }
+    const t = tflStops.find(s => String(s.id) === String(id));
+    if (t) { handleSelectStation({ id: t.id, name: t.name, type: t.type as TransportMode, lat: t.lat, lng: t.lng }); return; }
+    // Unknown stop (bus-stops.json / live TfL layer) — use popup-provided info
+    if (name) handleSelectStation({ id, name, type: type ?? 'bus' });
+  };
+
+  // ── Route for the tracked service ────────────────────────────────────────
+  // In real mode: fetch stop sequence from TfL /Line/{id}/Route/Sequence/{dir}.
+  // In mock mode: look up in MOCK_ROUTES via getServiceRoute().
+
+  const [liveRoute, setLiveRoute] = useState<RouteStop[]>([]);
+  const [routeStopTimes, setRouteStopTimes] = useState<string[]>([]);
+  const [liveTimetable, setLiveTimetable] = useState<RouteTimetable | null>(null);
+
+  useEffect(() => {
+    if (!trackedService) {
+      setLiveRoute([]); setRouteStopTimes([]); setLiveTimetable(null);
+      return;
+    }
+
+    if (!trackedService.lineId) {
+      // Mock mode — use hardcoded route data; timetable from mock generator
+      setLiveRoute(getServiceRoute(trackedService.operator, trackedService.destination));
+      setRouteStopTimes([]);
+      setLiveTimetable(null);
+      return;
+    }
+
+    // Real TfL mode — fetch route sequence then timetable
+    const dir = trackedService.direction === 'inbound' ? 'inbound' : 'outbound';
+    const apiKey = import.meta.env.VITE_TFL_API_KEY ?? '';
+    const mode = selectedStation?.type ?? 'tube';
+    // Resolve canonical line ID — some lines (e.g. Elizabeth line) return a hex
+    // UUID from the Arrivals API which Route/Sequence and Timetable reject.
+    const lineId = canonicalLineId(trackedService.lineId, trackedService.operator);
+    const depTime = trackedService.time;
+    const boardingName = selectedStation?.name ?? '';
+
+    (async () => {
+      // ── 1. Route sequence ────────────────────────────────────────────────
+      let route: RouteStop[] = [];
+      let firstStopId: string | undefined;
+      try {
+        const seqData = await fetch(
+          `https://api.tfl.gov.uk/Line/${lineId}/Route/Sequence/${dir}?app_key=${apiKey}`
+        ).then(r => r.json()) as {
+          stopPointSequences?: Array<{
+            stopPoint: Array<{ id: string; topMostParentId?: string; name: string; lat: number; lon: number }>;
+          }>;
+        };
+
+        const sequences = seqData.stopPointSequences ?? [];
+        if (sequences.length === 0) { setLiveRoute([]); return; }
+
+        const stationLower = boardingName.toLowerCase();
+        const best = sequences.find(seq =>
+          seq.stopPoint.some(s => {
+            const sn = stripStationSuffix(s.name).toLowerCase();
+            return sn.includes(stationLower) || stationLower.includes(sn);
+          })
+        ) ?? sequences[0];
+
+        route = best.stopPoint.map(s => ({
+          name: stripStationSuffix(s.name), lat: s.lat, lng: s.lon, type: mode,
+        }));
+        setLiveRoute(route);
+
+        const firstStop = best.stopPoint[0];
+        firstStopId = firstStop?.topMostParentId ?? firstStop?.id;
+        console.debug('[TfL Route] stops:', route.length, '| firstStopId:', firstStopId);
+      } catch (err) {
+        console.error('[TfL Route] fetch failed:', err);
+        setLiveRoute([]); setRouteStopTimes([]); setLiveTimetable(null);
+        return;
+      }
+
+      // ── 2. Timetable — rail only, failure does not clear the route ──────
+      if (mode === 'bus' || !firstStopId) { setRouteStopTimes([]); setLiveTimetable(null); return; }
+
+      try {
+        const ttData: TflTimetableResponse = await fetch(
+          `https://api.tfl.gov.uk/Line/${lineId}/Timetable/${firstStopId}?app_key=${apiKey}`
+        ).then(r => r.json());
+
+        const { timetable: built, stopTimes } = buildTflTimetable(ttData, route, depTime, boardingName);
+        console.debug('[TfL Timetable] built:', built.departureTimes.length, 'services |', stopTimes.filter(Boolean).length, 'stop times');
+        setLiveTimetable(built.departureTimes.length > 0 ? built : null);
+        setRouteStopTimes(stopTimes);
+      } catch (err) {
+        console.error('[TfL Timetable] fetch failed:', err);
+        // Route is still visible — just no times
+        setRouteStopTimes([]); setLiveTimetable(null);
+      }
+    })();
+  }, [trackedService, selectedStation?.name, selectedStation?.type]);
+
+  const trackingRoute = (view === 'tracking' || view === 'timetable') ? liveRoute : [];
+
+  // ── Clock — ticks every 30 s so inferred vehicle position stays current ───
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // ── Tracking: vehicle and boarding stop indices ───────────────────────────
 
-  // Index of the route stop nearest to the vehicle's current position.
-  const vehicleStopIndex = useMemo((): number => {
-    if (!trackedService?.vehiclePosition || trackingRoute.length === 0) return -1;
-    const vp = trackedService.vehiclePosition;
-    let minSq = Infinity;
-    let nearest = 0;
-    trackingRoute.forEach((stop, i) => {
-      const sq = (stop.lat - vp.lat) ** 2 + (stop.lng - vp.lng) ** 2;
-      if (sq < minSq) { minSq = sq; nearest = i; }
+  // Effective stop times: use real interval data when available; fall back to
+  // estimating 2 min per stop from the departure time so the vehicle indicator
+  // always works in demo mode even when the TfL Timetable API returns no data.
+  const effectiveStopTimes = useMemo((): string[] => {
+    if (routeStopTimes.filter(Boolean).length >= 2) return routeStopTimes;
+    const dep = trackedService?.time ?? '';
+    if (!dep || trackingRoute.length === 0) return routeStopTimes;
+    const [h, m] = dep.split(':').map(Number);
+    return trackingRoute.map((_, i) => {
+      const mins = h * 60 + (m || 0) + i * 2;
+      return `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
     });
-    return nearest;
-  }, [trackedService?.vehiclePosition, trackingRoute]);
+  }, [routeStopTimes, trackedService?.time, trackingRoute]);
+
+  // Index of the route stop nearest to the vehicle's current position.
+  // Real GPS takes priority; falls back to inferring from effectiveStopTimes.
+  const vehicleStopIndex = useMemo((): number => {
+    if (trackingRoute.length === 0) return -1;
+
+    // Real GPS position
+    if (trackedService?.vehiclePosition) {
+      const vp = trackedService.vehiclePosition;
+      let minSq = Infinity; let nearest = 0;
+      trackingRoute.forEach((stop, i) => {
+        const sq = (stop.lat - vp.lat) ** 2 + (stop.lng - vp.lng) ** 2;
+        if (sq < minSq) { minSq = sq; nearest = i; }
+      });
+      return nearest;
+    }
+
+    // Infer from stop times: last stop whose scheduled time ≤ current clock
+    if (effectiveStopTimes.length === 0) return -1;
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    let last = -1;
+    effectiveStopTimes.forEach((t, i) => {
+      if (!t) return;
+      const [h, m] = t.split(':').map(Number);
+      if (h * 60 + (m || 0) <= nowMins) last = i;
+    });
+    return last;
+  }, [trackedService?.vehiclePosition, trackingRoute, effectiveStopTimes, now]);
+
+  // Vehicle position for the map: real GPS or the inferred stop's coordinates.
+  const vehicleMapPosition = useMemo(() => {
+    if (trackedService?.vehiclePosition) return trackedService.vehiclePosition;
+    if (vehicleStopIndex >= 0 && trackingRoute[vehicleStopIndex]) {
+      const s = trackingRoute[vehicleStopIndex];
+      return { lat: s.lat, lng: s.lng };
+    }
+    return undefined;
+  }, [trackedService?.vehiclePosition, vehicleStopIndex, trackingRoute]);
 
   // Index of the stop that matches the selected station (where the user wants to board).
   const boardingStopIndex = useMemo((): number => {
@@ -271,9 +570,12 @@ export default function DeparturesPage() {
 
   // ── Timetable (derived when tracking a service) ───────────────────────────
 
+  // Real mode: use live TfL timetable; mock mode: generate from ROUTE_CONFIG
   const timetable =
     trackedService && (view === 'timetable' || view === 'tracking')
-      ? getRouteTimetable(trackedService.operator, trackedService.destination, trackedService.time)
+      ? (trackedService.lineId
+          ? liveTimetable
+          : getRouteTimetable(trackedService.operator, trackedService.destination, trackedService.time))
       : null;
 
   // ── Derived UI ────────────────────────────────────────────────────────────
@@ -369,8 +671,23 @@ export default function DeparturesPage() {
                 </div>
               </div>
 
-              {/* See timetable */}
-              {timetable && (
+              {/* Timetable action */}
+              {trackedService.lineId ? (
+                // Real TfL mode: link out to TfL website (single-service only, no full grid)
+                <div className="mb-4">
+                  <a
+                    href={`https://tfl.gov.uk/tube/timetable/${canonicalLineId(trackedService.lineId, trackedService.operator)}/`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-semibold text-sm transition hover:opacity-80"
+                    style={{ borderColor: getModeHex(selectedStation.type), color: getModeHex(selectedStation.type) }}
+                  >
+                    <CalendarDays className="w-4 h-4" aria-hidden="true" />
+                    View full timetable on TfL ↗
+                  </a>
+                </div>
+              ) : timetable ? (
+                // Mock mode: open the in-app timetable viewer
                 <div className="mb-4">
                   <button
                     onClick={() => setView('timetable')}
@@ -381,7 +698,7 @@ export default function DeparturesPage() {
                     See timetable
                   </button>
                 </div>
-              )}
+              ) : null}
 
               {/* Route timeline */}
               {trackingRoute.length > 0 && (
@@ -428,10 +745,23 @@ export default function DeparturesPage() {
                           )}
                         </div>
 
-                        {/* Stop name + badges */}
+                        {/* Stop name + time + badges */}
                         <div className="flex-1 pb-3 flex items-start justify-between gap-2 min-w-0">
                           <span className={nameClass}>{stop.name}</span>
                           <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                            {/* Scheduled time at this stop */}
+                            {effectiveStopTimes[idx] && (
+                              <span className={`text-xs tabular-nums font-medium ${
+                                isPast    ? 'text-gray-400 line-through' :
+                                isVehicle ? 'text-green-700 font-semibold' :
+                                isBoarding ? 'font-bold' :
+                                            'text-gray-500'
+                              }`}
+                              style={isBoarding && !isPast ? { color: getModeHex(selectedStation!.type) } : undefined}
+                              >
+                                {effectiveStopTimes[idx]}
+                              </span>
+                            )}
                             {isVehicle && (
                               <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
                                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
@@ -558,8 +888,8 @@ export default function DeparturesPage() {
               </div>
 
               <div className="px-4 sm:px-6 py-3 space-y-2">
-                {nearbyStations.map(station => {
-                  const stationDeps = MOCK_DEPARTURES[station.id] ?? [];
+                {nearbyFromMap.map(station => {
+                  const stationDeps = MOCK_DEPARTURES[station.id as number] ?? [];
                   const hasLive = stationDeps.some(d => d.hasLiveTracking);
                   return (
                     <button
@@ -643,6 +973,11 @@ export default function DeparturesPage() {
                   <li className="py-8 text-center text-gray-500 text-sm">
                     Loading departures…
                   </li>
+                ) : departuresError ? (
+                  <li className="py-8 text-center text-sm">
+                    <p className="text-red-600 font-medium mb-1">Failed to load departures</p>
+                    <p className="text-gray-500 text-xs break-all px-4">{departuresError}</p>
+                  </li>
                 ) : departures.length === 0 ? (
                   <li className="py-8 text-center text-gray-500 text-sm">
                     No departures found
@@ -653,10 +988,7 @@ export default function DeparturesPage() {
                       dep.time === highlightTime &&
                       dep.operator.toLowerCase() === highlightOp;
 
-                    const isBus = selectedStation!.type === 'bus';
-                    const serviceTitle = isBus
-                      ? `${dep.operator} · Heading to ${dep.destination}`
-                      : `${selectedStation!.name} to ${dep.destination}`;
+                    const serviceTitle = `${dep.operator} to ${dep.destination}`;
 
                     const modeHex = getModeHex(selectedStation!.type);
                     const statusClass = !dep.hasLiveTracking
@@ -708,7 +1040,6 @@ export default function DeparturesPage() {
 
                               {/* Operator + platform */}
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {!isBus && <p className="text-sm text-gray-500">{dep.operator}</p>}
                                 {dep.platform !== null && (
                                   <span
                                     style={{ color: modeHex, backgroundColor: `${modeHex}1a` }}
@@ -754,7 +1085,7 @@ export default function DeparturesPage() {
           {(view === 'tracking' || view === 'timetable') && trackedService && selectedStation ? (
             <LiveTrackingMap
               route={trackingRoute}
-              vehiclePosition={trackedService.vehiclePosition}
+              vehiclePosition={vehicleMapPosition}
               direction={trackedService.direction}
               stationName={selectedStation.name}
               stationType={selectedStation.type}
@@ -762,8 +1093,12 @@ export default function DeparturesPage() {
             />
           ) : (
             <MapView
-              markers={stationMarkers}
+              markers={allStopMarkers}
+              showBusStops
+              showPopups={false}
+              onViewDepartures={handleViewDepartures}
               onMarkerClick={handleMarkerClick}
+              onCenterChange={setMapCenter}
               height="100%"
               zoom={13}
             />

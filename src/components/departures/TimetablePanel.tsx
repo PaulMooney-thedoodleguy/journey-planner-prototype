@@ -44,7 +44,7 @@ export default function TimetablePanel({
   boardingStopName,
   onBack,
 }: Props) {
-  const [activeTab, setActiveTab]       = useState<'service' | 'all'>('service');
+  const [activeTab, setActiveTab] = useState<'service' | 'all'>('service');
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -57,6 +57,8 @@ export default function TimetablePanel({
 
   const hex = getModeHex(stationType);
   const { stops, departureTimes, selectedServiceIndex } = timetable;
+  // "All services" tab requires multiple departure columns — hide it for live (single-service) data
+  const hasMultipleServices = departureTimes.length > 1;
 
   // Stable reference to "today at midnight" — computed once on mount
   const today = useMemo(() => {
@@ -351,38 +353,40 @@ export default function TimetablePanel({
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-4" role="tablist">
-        <button
-          role="tab"
-          aria-selected={activeTab === 'service'}
-          onClick={() => setActiveTab('service')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition ${
-            activeTab === 'service'
-              ? 'bg-white shadow-sm text-gray-900'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-          This service
-        </button>
-        <button
-          role="tab"
-          aria-selected={activeTab === 'all'}
-          onClick={() => setActiveTab('all')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition ${
-            activeTab === 'all'
-              ? 'bg-white shadow-sm text-gray-900'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
-          All services
-        </button>
-      </div>
-
-      {/* Tab panels */}
-      {activeTab === 'service' ? <ServiceTab /> : <AllServicesTab />}
+      {/* Single-service: no tab bar needed; multi-service: show tab switcher */}
+      {!hasMultipleServices ? <ServiceTab /> : (
+        <>
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-4" role="tablist">
+            <button
+              role="tab"
+              aria-selected={activeTab === 'service'}
+              onClick={() => setActiveTab('service')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition ${
+                activeTab === 'service'
+                  ? 'bg-white shadow-sm text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+              This service
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'all'}
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition ${
+                activeTab === 'all'
+                  ? 'bg-white shadow-sm text-gray-900'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" aria-hidden="true" />
+              All services
+            </button>
+          </div>
+          {activeTab === 'service' ? <ServiceTab /> : <AllServicesTab />}
+        </>
+      )}
 
     </div>
   );

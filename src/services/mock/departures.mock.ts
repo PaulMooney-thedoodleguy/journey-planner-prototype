@@ -9,8 +9,8 @@ export class MockDeparturesService implements IDeparturesService {
     return NEARBY_STATIONS;
   }
 
-  async getDepartures(stationId: number): Promise<Departure[]> {
+  async getDepartures(stationId: string | number): Promise<Departure[]> {
     await new Promise(r => setTimeout(r, 300));
-    return MOCK_DEPARTURES[stationId] ?? [];
+    return MOCK_DEPARTURES[stationId as number] ?? [];
   }
 }

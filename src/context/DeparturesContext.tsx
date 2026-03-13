@@ -8,6 +8,7 @@ interface DeparturesContextValue {
   setSelectedStation: (s: Station | null) => Promise<void>;
   departures: Departure[];
   isDeparturesLoading: boolean;
+  departuresError: string | null;
   trackedService: Departure | null;
   setTrackedService: (d: Departure | null) => void;
 }
@@ -19,6 +20,7 @@ export function DeparturesProvider({ children }: { children: ReactNode }) {
   const [selectedStation, setSelectedStationState] = useState<Station | null>(null);
   const [departures, setDepartures] = useState<Departure[]>([]);
   const [isDeparturesLoading, setIsDeparturesLoading] = useState(false);
+  const [departuresError, setDeparturesError] = useState<string | null>(null);
   const [trackedService, setTrackedService] = useState<Departure | null>(null);
 
   useEffect(() => {
@@ -32,12 +34,17 @@ export function DeparturesProvider({ children }: { children: ReactNode }) {
     setSelectedStationState(station);
     setTrackedService(null);
     setDepartures([]);
+    setDeparturesError(null);
     if (station) {
       setIsDeparturesLoading(true);
       try {
         const service = await getDeparturesService();
         const deps = await service.getDepartures(station.id);
         setDepartures(deps);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error('Failed to load departures:', msg);
+        setDeparturesError(msg);
       } finally {
         setIsDeparturesLoading(false);
       }
@@ -47,7 +54,7 @@ export function DeparturesProvider({ children }: { children: ReactNode }) {
   return (
     <DeparturesContext.Provider value={{
       nearbyStations, selectedStation, setSelectedStation,
-      departures, isDeparturesLoading,
+      departures, isDeparturesLoading, departuresError,
       trackedService, setTrackedService,
     }}>
       {children}

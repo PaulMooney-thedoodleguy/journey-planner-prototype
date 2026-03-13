@@ -18,13 +18,7 @@ interface JourneyCardProps {
 export default function JourneyCard({ journey: j, ticketType, isGreenest, isFastest, isCheapest, onSelect, disruption }: JourneyCardProps) {
   const [showLegs, setShowLegs] = useState(false);
 
-  const borderClass = isGreenest
-    ? 'border-green-500 bg-green-50/50'
-    : isFastest
-    ? 'border-brand bg-brand-light'
-    : isCheapest
-    ? 'border-purple-500 bg-purple-50/50'
-    : 'border-gray-200 hover:border-brand';
+  const borderClass = 'border-gray-200 hover:border-gray-300';
 
   const co2Class = j.co2 <= 8
     ? 'bg-green-100 text-green-800'
@@ -43,7 +37,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
       {(isGreenest || isFastest || isCheapest) && (
         <div className="px-4 pt-3 flex flex-wrap gap-2">
           {isGreenest && (
-            <span className="inline-flex items-center gap-1.5 bg-green-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 bg-niq-teal text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -52,13 +46,13 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
             </span>
           )}
           {isFastest && (
-            <span className="inline-flex items-center gap-1.5 bg-brand text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 bg-niq-orange text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
               <Clock className="w-3.5 h-3.5 shrink-0" />
               Fastest
             </span>
           )}
           {isCheapest && (
-            <span className="inline-flex items-center gap-1.5 bg-purple-500 text-white px-2.5 py-1 rounded-lg text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 bg-niq-sky text-brand px-2.5 py-1 rounded-lg text-xs font-semibold">
               <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -69,7 +63,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
       )}
 
       {/* ── Times row ──────────────────────────────────────────────────── */}
-      <div className="px-4 pt-3 flex items-center justify-between gap-2">
+      <div className="pl-4 pr-10 pt-3 flex items-center justify-between gap-2">
         {/* Departure – Arrival */}
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-2xl font-bold tabular-nums">{j.departure}</span>
@@ -81,7 +75,7 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
       </div>
 
       {/* ── Station names ───────────────────────────────────────────────── */}
-      <div className="px-4 pt-0.5 flex items-center justify-between gap-2">
+      <div className="pl-4 pr-10 pt-0.5 flex items-center justify-between gap-2">
         <span className="text-xs text-gray-500 truncate">{j.from}</span>
         <span className="text-xs text-gray-500 shrink-0">
           {j.changes === 0 ? 'Direct' : `${j.changes} change${j.changes > 1 ? 's' : ''}`}
@@ -91,13 +85,8 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
 
       {/* ── Operator row ────────────────────────────────────────────────── */}
       <div className="px-4 pt-2.5 pb-3 flex items-center gap-2.5">
-        {/* White bg + coloured border + coloured icon */}
         <div
-          style={{
-            backgroundColor: 'white',
-            border: `2px solid ${getModeHex(j.type)}`,
-            color: getModeHex(j.type),
-          }}
+          style={{ backgroundColor: '#f3f4f6', color: getModeHex(j.type) }}
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
         >
           {getTransportIcon(j.type, 'w-5 h-5')}
@@ -186,9 +175,8 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
                             {leg.departure} <span className="text-gray-400 font-normal">·</span> {leg.from}
                           </p>
                           <div className="flex items-center gap-2 my-1 text-xs text-gray-500">
-                            {/* Mode icon pill — same white container + coloured border as the operator row */}
                             <div
-                              style={{ backgroundColor: 'white', border: `1.5px solid ${legHex}`, color: legHex }}
+                              style={{ backgroundColor: '#f3f4f6', color: legHex }}
                               className="w-5 h-5 rounded flex items-center justify-center shrink-0"
                             >
                               {getTransportIcon(leg.mode, 'w-3 h-3')}

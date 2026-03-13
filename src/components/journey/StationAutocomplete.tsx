@@ -55,6 +55,9 @@ export default function StationAutocomplete({
   const listboxRef = useRef<HTMLUListElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Prevents onFocus and the debounced API effect from reopening the dropdown
+  // immediately after the user selects an option.
+  const justSelectedRef = useRef(false);
 
   // In mock mode derive options synchronously; in real mode use debounced API state.
   const filtered: StationOption[] = USE_REAL_API
@@ -81,6 +84,10 @@ export default function StationAutocomplete({
     }
 
     debounceRef.current = setTimeout(async () => {
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
       try {
         const { searchStations } = await import('../../services/tfl/tfl-stop-search');
         const results = await searchStations(value);
@@ -123,6 +130,9 @@ export default function StationAutocomplete({
   }, [shouldShowDropdown]);
 
   const selectStation = (name: string) => {
+    justSelectedRef.current = true;
+    // Cancel any pending debounced API search so it can't reopen the dropdown.
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     onChange(name);
     setIsOpen(false);
     setHighlightedIndex(-1);
@@ -235,6 +245,10 @@ export default function StationAutocomplete({
           onChange={handleChange}
           onFocus={() => {
             setIsFocused(true);
+            if (justSelectedRef.current) {
+              justSelectedRef.current = false;
+              return;
+            }
             if (value.length >= 2) setIsOpen(true);
           }}
           onBlur={handleBlur}

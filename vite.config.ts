@@ -29,6 +29,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        // Exclude the large bus-stops data chunk — too big to precache (15 MB)
+        globIgnores: ['**/bus-stops-*.js'],
         navigateFallback: '/index.html',
         skipWaiting: false,
         clientsClaim: true,

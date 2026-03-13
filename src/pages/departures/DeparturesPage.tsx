@@ -506,26 +506,41 @@ export default function DeparturesPage() {
 
   // ── Tracking: vehicle and boarding stop indices ───────────────────────────
 
-  // Effective stop times: use real interval data when available; fall back to
-  // estimating 2 min per stop from the departure time so the vehicle indicator
-  // always works in demo mode even when the TfL Timetable API returns no data.
+  // Boarding stop index must be computed first — effectiveStopTimes uses it
+  // to anchor estimated times at the right position in the route.
+  const boardingStopIndex = useMemo((): number => {
+    if (!selectedStation || trackingRoute.length === 0) return -1;
+    const name = selectedStation.name.toLowerCase();
+    return trackingRoute.findIndex(s => {
+      const sn = s.name.toLowerCase();
+      return sn === name || sn.includes(name) || name.includes(sn);
+    });
+  }, [selectedStation, trackingRoute]);
+
+  // Effective stop times: real TfL interval data when available, otherwise
+  // estimated at 2 min/stop anchored at the BOARDING STOP.
+  // trackedService.time is the ETA at the boarding stop (from TfL Arrivals),
+  // not the departure time from stop 0 — so we count back to stop 0 first.
   const effectiveStopTimes = useMemo((): string[] => {
     if (routeStopTimes.filter(Boolean).length >= 2) return routeStopTimes;
     const dep = trackedService?.time ?? '';
     if (!dep || trackingRoute.length === 0) return routeStopTimes;
     const [h, m] = dep.split(':').map(Number);
+    const depMins = h * 60 + (m || 0);
+    const anchor = boardingStopIndex >= 0 ? boardingStopIndex : 0;
     return trackingRoute.map((_, i) => {
-      const mins = h * 60 + (m || 0) + i * 2;
-      return `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+      const mins = ((depMins + (i - anchor) * 2) % 1440 + 1440) % 1440;
+      return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
     });
-  }, [routeStopTimes, trackedService?.time, trackingRoute]);
+  }, [routeStopTimes, trackedService?.time, trackingRoute, boardingStopIndex]);
 
-  // Index of the route stop nearest to the vehicle's current position.
-  // Real GPS takes priority; falls back to inferring from effectiveStopTimes.
+  // Index of the route stop the vehicle is currently at / has just passed.
+  // Converts the stop-time sequence to absolute minutes to handle midnight
+  // crossings (e.g. 23:59 → 00:01 must be +2 min, not −1438 min).
   const vehicleStopIndex = useMemo((): number => {
     if (trackingRoute.length === 0) return -1;
 
-    // Real GPS position
+    // Real GPS position takes priority
     if (trackedService?.vehiclePosition) {
       const vp = trackedService.vehiclePosition;
       let minSq = Infinity; let nearest = 0;
@@ -536,15 +551,28 @@ export default function DeparturesPage() {
       return nearest;
     }
 
-    // Infer from stop times: last stop whose scheduled time ≤ current clock
     if (effectiveStopTimes.length === 0) return -1;
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    let last = -1;
-    effectiveStopTimes.forEach((t, i) => {
-      if (!t) return;
-      const [h, m] = t.split(':').map(Number);
-      if (h * 60 + (m || 0) <= nowMins) last = i;
+
+    // Build absolute-minute values, adding 1440 whenever the sequence wraps midnight
+    let offset = 0;
+    let prevSm = -1;
+    const absMins = effectiveStopTimes.map(t => {
+      if (!t) return -1;
+      const [hh, mm] = t.split(':').map(Number);
+      let sm = hh * 60 + (mm || 0);
+      if (prevSm >= 0 && sm < prevSm - 120) offset += 1440;
+      sm += offset;
+      prevSm = sm;
+      return sm;
     });
+
+    // If the schedule starts late at night but it's now early morning, add 24 h
+    let nowMins = now.getHours() * 60 + now.getMinutes();
+    const firstAbs = absMins.find(v => v >= 0) ?? 0;
+    if (firstAbs >= 22 * 60 && nowMins < 6 * 60) nowMins += 1440;
+
+    let last = -1;
+    absMins.forEach((sm, i) => { if (sm >= 0 && sm <= nowMins) last = i; });
     return last;
   }, [trackedService?.vehiclePosition, trackingRoute, effectiveStopTimes, now]);
 
@@ -557,16 +585,6 @@ export default function DeparturesPage() {
     }
     return undefined;
   }, [trackedService?.vehiclePosition, vehicleStopIndex, trackingRoute]);
-
-  // Index of the stop that matches the selected station (where the user wants to board).
-  const boardingStopIndex = useMemo((): number => {
-    if (!selectedStation || trackingRoute.length === 0) return -1;
-    const name = selectedStation.name.toLowerCase();
-    return trackingRoute.findIndex(s => {
-      const sn = s.name.toLowerCase();
-      return sn === name || sn.includes(name) || name.includes(sn);
-    });
-  }, [selectedStation, trackingRoute]);
 
   // ── Timetable (derived when tracking a service) ───────────────────────────
 

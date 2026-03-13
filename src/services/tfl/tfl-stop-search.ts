@@ -41,16 +41,33 @@ export interface StationSuggestion {
 }
 
 // ─── resolveStationCoord ──────────────────────────────────────
-// Converts a free-text station name to "lat,lon" for OTP2 query params.
+// Resolves a free-text station name to "lat,lon" (used by OTP2).
 
 export async function resolveStationCoord(name: string): Promise<string> {
   const url = buildUrl(`/StopPoint/Search/${encodeURIComponent(name)}`, { modes: MODES });
   const res = await fetch(url);
   if (!res.ok) throw new Error(`TfL StopPoint Search failed (${res.status})`);
   const data = await res.json();
-  const match = data.matches?.[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const match = data.matches?.[0] as any;
   if (!match) throw new Error(`Station not found: ${name}`);
   return `${match.lat},${match.lon}`;
+}
+
+// ─── resolveStationId ─────────────────────────────────────────
+// Resolves a free-text station name to a TfL ICS ID (e.g. "1000129")
+// that the Journey Planner API accepts unambiguously.
+
+export async function resolveStationId(name: string): Promise<string> {
+  const url = buildUrl(`/StopPoint/Search/${encodeURIComponent(name)}`, { modes: MODES });
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`TfL StopPoint Search failed (${res.status})`);
+  const data = await res.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const match = data.matches?.[0] as any;
+  if (!match) throw new Error(`Station not found: ${name}`);
+  // icsId is the canonical identifier accepted by /Journey/JourneyResults
+  return (match.icsId as string) ?? (match.id as string);
 }
 
 // ─── searchStations ───────────────────────────────────────────

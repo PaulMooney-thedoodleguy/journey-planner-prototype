@@ -124,17 +124,18 @@ export default function ResultsPage() {
     ? getRoutePolyline(expandedJourney.legs)
     : [];
 
-  // Waypoint markers for the selected journey, deduped by station name
+  // Waypoint markers for the selected journey, deduped by station name.
+  // Prefer explicit leg coordinates (from real API); fall back to ROUTE_STATION_COORDS for mock data.
   const routeMarkers: MapMarker[] = expandedJourney?.legs
     ? Array.from(
         new Map(
           expandedJourney.legs.flatMap(leg => [
-            [leg.from, { leg, name: leg.from }],
-            [leg.to,   { leg, name: leg.to   }],
+            [leg.from, { leg, name: leg.from, lat: leg.fromLat, lng: leg.fromLng }],
+            [leg.to,   { leg, name: leg.to,   lat: leg.toLat,   lng: leg.toLng   }],
           ])
         ).values()
-      ).flatMap(({ leg, name }) => {
-        const coord = ROUTE_STATION_COORDS[name];
+      ).flatMap(({ leg, name, lat, lng }) => {
+        const coord = (lat && lng) ? { lat, lng } : ROUTE_STATION_COORDS[name];
         return coord ? [{ id: name, lat: coord.lat, lng: coord.lng, type: leg.mode, label: name }] : [];
       })
     : mapMarkers;

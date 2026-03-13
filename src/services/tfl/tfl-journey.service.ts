@@ -4,6 +4,7 @@
 import type { IJourneyService } from '../transport.service';
 import type { Journey, JourneyLeg, JourneySearchParams, TransportMode } from '../../types';
 import type { TflJourneyResponse, TflJourney, TflLeg } from './tfl-journey-types';
+import { resolveStationId } from './tfl-stop-search';
 
 const TFL_BASE = 'https://api.tfl.gov.uk';
 
@@ -114,6 +115,10 @@ function mapLeg(leg: TflLeg): JourneyLeg {
     platform: leg.departurePoint.platformName || undefined,
     stops: leg.path?.stopPoints?.length,
     intermediateStops: leg.path?.stopPoints?.map(s => s.commonName),
+    fromLat: leg.departurePoint.lat,
+    fromLng: leg.departurePoint.lon,
+    toLat: leg.arrivalPoint.lat,
+    toLng: leg.arrivalPoint.lon,
   };
 }
 
@@ -176,7 +181,14 @@ export class TflJourneyService implements IJourneyService {
   }
 
   async searchJourneys(params: JourneySearchParams): Promise<Journey[]> {
-    const url = this.buildUrl(params);
+    // Pre-resolve free-text names to ICS IDs so TfL doesn't return 300 disambiguation
+    const [fromId, toId, viaId] = await Promise.all([
+      resolveStationId(params.from),
+      resolveStationId(params.to),
+      params.via ? resolveStationId(params.via) : Promise.resolve(undefined),
+    ]);
+    const resolvedParams = { ...params, from: fromId, to: toId, via: viaId };
+    const url = this.buildUrl(resolvedParams);
     const res = await fetch(url);
     if (!res.ok) {
       const text = await res.text();

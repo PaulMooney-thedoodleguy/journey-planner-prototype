@@ -16,6 +16,12 @@ export interface JourneyLeg {
   platform?: string;
   stops?: number;
   intermediateStops?: string[];
+  /** Coordinates populated by real API — used for route polyline when station
+   *  names don't match the hardcoded ROUTE_STATION_COORDS lookup table. */
+  fromLat?: number;
+  fromLng?: number;
+  toLat?: number;
+  toLng?: number;
 }
 
 export interface OperatorTicket {

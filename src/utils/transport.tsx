@@ -76,8 +76,13 @@ export function lookupCoords(name: string): { lat: number; lng: number } | null 
 export function getRoutePolyline(legs: JourneyLeg[]): { lat: number; lng: number }[] {
   const pts: { lat: number; lng: number }[] = [];
   for (const leg of legs) {
-    const from = lookupCoords(leg.from);
-    const to   = lookupCoords(leg.to);
+    // Use explicit coordinates from real API if present; fall back to name lookup for mock data
+    const from = (leg.fromLat && leg.fromLng)
+      ? { lat: leg.fromLat, lng: leg.fromLng }
+      : lookupCoords(leg.from);
+    const to = (leg.toLat && leg.toLng)
+      ? { lat: leg.toLat, lng: leg.toLng }
+      : lookupCoords(leg.to);
     if (from && (pts.length === 0 || pts[pts.length - 1].lat !== from.lat)) pts.push(from);
     if (to) pts.push(to);
   }

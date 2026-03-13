@@ -4,7 +4,7 @@ import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet.markercluster';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, ZoomIn } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
 import { getModeHex } from '../../utils/transport';
@@ -144,6 +144,13 @@ function StaticBusStopLayer() {
       ))}
     </MarkerClusterGroup>
   );
+}
+
+/** Null-rendering component that fires a callback whenever the map zoom changes. */
+function ZoomWatcher({ onZoom }: { onZoom: (zoom: number) => void }) {
+  const map = useMap();
+  useMapEvents({ zoomend: () => onZoom(map.getZoom()) });
+  return null;
 }
 
 const BUS_ZOOM_THRESHOLD = 15;
@@ -291,6 +298,30 @@ export default function MapView({
   // Only render the filter control when there are 2+ distinct modes in the data
   const showFilter = availableModes.length > 1;
 
+  // ── Zoom hint toast ───────────────────────────────────────────────────────
+  // Show when bus stops are enabled but the map starts below the reveal threshold.
+  const [showZoomToast, setShowZoomToast] = useState(
+    showBusStops && (zoom ?? 13) < STATIC_BUS_ZOOM
+  );
+  const dismissToast = useCallback(() => setShowZoomToast(false), []);
+
+  // Auto-dismiss after 5 s
+  useEffect(() => {
+    if (!showZoomToast) return;
+    const t = setTimeout(dismissToast, 5000);
+    return () => clearTimeout(t);
+  }, [showZoomToast, dismissToast]);
+
+  // Dismiss if bus mode is toggled off
+  useEffect(() => {
+    if (!showBusStops) setShowZoomToast(false);
+  }, [showBusStops]);
+
+  const handleZoomForToast = useCallback(
+    (z: number) => { if (z >= STATIC_BUS_ZOOM) setShowZoomToast(false); },
+    []
+  );
+
   return (
     <div style={{ height }} className="w-full relative">
 
@@ -377,6 +408,8 @@ export default function MapView({
           />
         ))}
 
+        {/* Dismiss zoom toast once user reaches the bus stop threshold */}
+        <ZoomWatcher onZoom={handleZoomForToast} />
         {/* Static bus stops — viewport-culled, always shown */}
         {showBusStops && <StaticBusStopLayer />}
         {/* Live bus stops from TfL API — augments static layer at close zoom */}
@@ -469,6 +502,26 @@ export default function MapView({
               })}
             </div>
           )}
+        </div>
+      )}
+      {/* ── Zoom hint toast ──────────────────────────────────────────────── */}
+      {showZoomToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[400] pointer-events-auto"
+        >
+          <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-100 text-sm font-medium text-gray-700 whitespace-nowrap">
+            <ZoomIn className="w-4 h-4 text-brand shrink-0" aria-hidden="true" />
+            <span>Zoom in to explore bus stops</span>
+            <button
+              onClick={dismissToast}
+              aria-label="Dismiss hint"
+              className="ml-1 rounded-full p-0.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            >
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       )}
     </div>

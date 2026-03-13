@@ -258,7 +258,7 @@ export default function StationAutocomplete({
       {label && (
         <label
           htmlFor={id}
-          className={`absolute left-2 px-1 bg-white pointer-events-none select-none origin-left transition-all duration-150 ${labelColorClass} ${
+          className={`absolute left-2 z-10 px-1 bg-white pointer-events-none select-none origin-left transition-all duration-150 ${labelColorClass} ${
             isFloating
               ? '-top-2.5 translate-y-0 text-xs'
               : 'top-1/2 -translate-y-1/2 text-sm'

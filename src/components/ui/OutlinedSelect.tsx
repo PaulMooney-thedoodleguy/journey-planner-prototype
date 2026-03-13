@@ -39,7 +39,7 @@ export default function OutlinedSelect({
       {/* Always-floating label */}
       <label
         htmlFor={id}
-        className={`absolute left-2 -top-2.5 translate-y-0 text-xs px-1 bg-white pointer-events-none select-none transition-colors ${labelColorClass}`}
+        className={`absolute left-2 z-10 -top-2.5 translate-y-0 text-xs px-1 bg-white pointer-events-none select-none transition-colors ${labelColorClass}`}
       >
         {label}
       </label>

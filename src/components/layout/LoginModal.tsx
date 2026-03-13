@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuthContext } from '../../context/AuthContext';
 import BrandLogo from '../icons/BrandLogo';
+import OutlinedField from '../ui/OutlinedField';
 
 type Tab = 'signin' | 'register';
 
@@ -154,62 +155,34 @@ export default function LoginModal() {
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {/* Name — register only */}
           {tab === 'register' && (
-            <div>
-              <label htmlFor="modal-login-name" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Full name
-              </label>
-              <input
-                id="modal-login-name"
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                autoComplete="name"
-                placeholder="Alex Smith"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none"
-              />
-            </div>
+            <OutlinedField
+              id="modal-login-name"
+              label="Full name"
+              type="text"
+              value={name}
+              onChange={setName}
+              autoComplete="name"
+            />
           )}
 
-          <div>
-            <label htmlFor="modal-login-email" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Email
-            </label>
-            <input
-              ref={emailRef}
-              id="modal-login-email"
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoComplete="email"
-              placeholder="alex@example.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none"
-            />
-          </div>
+          <OutlinedField
+            id="modal-login-email"
+            label="Email"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            autoComplete="email"
+            fieldRef={emailRef}
+          />
 
-          <div>
-            <label htmlFor="modal-login-password" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="modal-login-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(v => !v)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
+          <OutlinedField
+            id="modal-login-password"
+            label="Password"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            autoComplete={tab === 'signin' ? 'current-password' : 'new-password'}
+          />
 
           <button
             type="submit"

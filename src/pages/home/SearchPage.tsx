@@ -7,6 +7,7 @@ import MapView from '../../components/map/MapView';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
+import OutlinedField from '../../components/ui/OutlinedField';
 import SavedJourneyCard from '../../components/journey/SavedJourneyCard';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
@@ -114,9 +115,6 @@ export default function SearchPage() {
     }
   };
 
-  const inputClass = (field: string) =>
-    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${formErrors[field] ? 'border-red-500' : 'border-gray-300'}`;
-
   return (
     <PageShell fullHeight>
       {/*
@@ -159,16 +157,14 @@ export default function SearchPage() {
 
               {/* From */}
               <div>
-                <label htmlFor="from-input" className="block text-sm font-medium text-gray-700 mb-2">From</label>
                 <div className="flex gap-2">
                   <StationAutocomplete
                     id="from-input"
+                    label="From"
                     value={localParams.from}
                     onChange={v => updateField('from', v)}
-                    placeholder="e.g. London Kings Cross"
                     errorId={formErrors.from ? 'from-error' : undefined}
                     hasError={!!formErrors.from}
-                    inputClassName={inputClass('from')}
                   />
                   <button onClick={swapLocations} aria-label="Swap departure and destination" title="Swap departure and destination" className="bg-brand-light hover:bg-brand-light text-brand p-3 rounded-lg transition-colors shrink-0">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,14 +178,12 @@ export default function SearchPage() {
               {/* Via — shown between From and To when toggled on */}
               {showVia && (
                 <div>
-                  <label htmlFor="via-input" className="block text-sm font-medium text-gray-700 mb-2">Via <span className="font-normal text-gray-400">(optional)</span></label>
                   <div className="flex gap-2">
                     <StationAutocomplete
                       id="via-input"
+                      label="Via (optional)"
                       value={localParams.via ?? ''}
                       onChange={v => updateField('via', v)}
-                      placeholder="e.g. Crewe"
-                      inputClassName={inputClass('via')}
                     />
                     <button
                       type="button"
@@ -209,16 +203,14 @@ export default function SearchPage() {
 
               {/* To */}
               <div>
-                <label htmlFor="to-input" className="block text-sm font-medium text-gray-700 mb-2">To</label>
                 <div className="flex gap-2">
                   <StationAutocomplete
                     id="to-input"
+                    label="To"
                     value={localParams.to}
                     onChange={v => updateField('to', v)}
-                    placeholder="e.g. Manchester Piccadilly"
                     errorId={formErrors.to ? 'to-error' : undefined}
                     hasError={!!formErrors.to}
-                    inputClassName={inputClass('to')}
                   />
                   {!showVia && (
                     <button
@@ -269,8 +261,8 @@ export default function SearchPage() {
 
               {/* Date & Time — "Use current time" shortcut resets to now rounded to next 5 mins */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="date-input" className="text-sm font-medium text-gray-700">Date & Time</label>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-gray-700">Date &amp; Time</span>
                   <button
                     type="button"
                     onClick={setNow}
@@ -281,27 +273,26 @@ export default function SearchPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <input
+                    <OutlinedField
                       id="date-input"
+                      label="Date"
                       type="date"
                       value={localParams.date}
-                      onChange={e => updateField('date', e.target.value)}
-                      aria-describedby={formErrors.date ? 'date-error' : undefined}
-                      aria-invalid={!!formErrors.date}
-                      className={inputClass('date')}
+                      onChange={v => updateField('date', v)}
+                      errorId={formErrors.date ? 'date-error' : undefined}
+                      hasError={!!formErrors.date}
                     />
                     {formErrors.date && <p id="date-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.date}</p>}
                   </div>
                   <div>
-                    <label htmlFor="time-input" className="sr-only">Time</label>
-                    <input
+                    <OutlinedField
                       id="time-input"
+                      label="Time"
                       type="time"
                       value={localParams.time}
-                      onChange={e => updateField('time', e.target.value)}
-                      aria-describedby={formErrors.time ? 'time-error' : undefined}
-                      aria-invalid={!!formErrors.time}
-                      className={inputClass('time')}
+                      onChange={v => updateField('time', v)}
+                      errorId={formErrors.time ? 'time-error' : undefined}
+                      hasError={!!formErrors.time}
                     />
                     {formErrors.time && <p id="time-error" role="alert" className="text-red-600 text-xs mt-1">{formErrors.time}</p>}
                   </div>

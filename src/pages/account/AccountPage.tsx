@@ -4,6 +4,8 @@ import { useAuthContext } from '../../context/AuthContext';
 import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
+import OutlinedField from '../../components/ui/OutlinedField';
+import OutlinedSelect from '../../components/ui/OutlinedSelect';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
 const RAILCARD_OPTIONS: { value: NonNullable<import('../../types').UserProfile['defaultRailcard']>; label: string }[] = [
@@ -66,8 +68,6 @@ export default function AccountPage() {
     navigate('/');
   }
 
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none';
-
   return (
     <PageShell>
       <button
@@ -99,54 +99,42 @@ export default function AccountPage() {
           <fieldset>
             <legend className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Profile</legend>
 
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="account-name" className="block text-sm font-medium text-gray-700 mb-1.5">Full name</label>
-                <input
-                  id="account-name"
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  autoComplete="name"
-                  className={inputClass}
-                />
-              </div>
+            <div className="space-y-5">
+              <OutlinedField
+                id="account-name"
+                label="Full name"
+                type="text"
+                value={name}
+                onChange={setName}
+                autoComplete="name"
+              />
 
-              <div>
-                <label htmlFor="account-email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                <input
-                  id="account-email"
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                  className={inputClass}
-                />
-              </div>
+              <OutlinedField
+                id="account-email"
+                label="Email"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                autoComplete="email"
+              />
 
-              <div>
-                <label htmlFor="account-home-station" className="block text-sm font-medium text-gray-700 mb-1.5">Home station</label>
-                <StationAutocomplete
-                  id="account-home-station"
-                  value={homeStation}
-                  onChange={setHomeStation}
-                  placeholder="Search stations…"
-                />
-              </div>
+              <StationAutocomplete
+                id="account-home-station"
+                label="Home station"
+                value={homeStation}
+                onChange={setHomeStation}
+              />
 
-              <div>
-                <label htmlFor="account-railcard" className="block text-sm font-medium text-gray-700 mb-1.5">Default railcard</label>
-                <select
-                  id="account-railcard"
-                  value={railcard}
-                  onChange={e => setRailcard(e.target.value as typeof railcard)}
-                  className={`${inputClass} bg-white`}
-                >
-                  {RAILCARD_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <OutlinedSelect
+                id="account-railcard"
+                label="Default railcard"
+                value={railcard}
+                onChange={v => setRailcard(v as typeof railcard)}
+              >
+                {RAILCARD_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </OutlinedSelect>
             </div>
           </fieldset>
 

@@ -4,6 +4,7 @@ import { CreditCard } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAuthContext } from '../../context/AuthContext';
 import PageShell from '../../components/layout/PageShell';
+import OutlinedField from '../../components/ui/OutlinedField';
 import { formatPrice } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
@@ -70,9 +71,6 @@ export default function CheckoutPage() {
     navigate('/confirmation');
   };
 
-  const fieldClass = (field: string) =>
-    `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-tint focus:border-transparent focus:outline-none ${errors[field] ? 'border-red-500' : 'border-gray-300'}`;
-
   return (
     <PageShell>
       <button onClick={() => navigate('/results')} className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2">
@@ -104,49 +102,43 @@ export default function CheckoutPage() {
         {/* form element enables Enter-to-submit and correct screen reader semantics (WCAG 4.1.2) */}
         <form onSubmit={handlePayment} noValidate className="space-y-6">
           <div>
-            <label htmlFor="name-input" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-            <input
+            <OutlinedField
               id="name-input"
+              label="Full Name"
               type="text"
               value={passengerDetails.name}
-              onChange={e => updatePassenger('name', e.target.value)}
-              placeholder="John Smith"
+              onChange={v => updatePassenger('name', v)}
               autoComplete="name"
-              aria-describedby={errors.name ? 'name-error' : undefined}
-              aria-invalid={!!errors.name}
-              className={fieldClass('name')}
+              errorId={errors.name ? 'name-error' : undefined}
+              hasError={!!errors.name}
             />
             {errors.name && <p id="name-error" role="alert" className="text-red-600 text-xs mt-1">{errors.name}</p>}
           </div>
           <div>
-            <label htmlFor="email-input" className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
+            <OutlinedField
               id="email-input"
+              label="Email"
               type="email"
               value={passengerDetails.email}
-              onChange={e => updatePassenger('email', e.target.value)}
-              placeholder="john.smith@example.com"
+              onChange={v => updatePassenger('email', v)}
               autoComplete="email"
-              aria-describedby={errors.email ? 'email-error' : undefined}
-              aria-invalid={!!errors.email}
-              className={fieldClass('email')}
+              errorId={errors.email ? 'email-error' : undefined}
+              hasError={!!errors.email}
             />
             {errors.email && <p id="email-error" role="alert" className="text-red-600 text-xs mt-1">{errors.email}</p>}
           </div>
           <div>
-            <label htmlFor="card-input" className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-            <input
+            <OutlinedField
               id="card-input"
+              label="Card Number"
               type="text"
               value={cardNumber}
-              onChange={e => updateCard(e.target.value)}
-              placeholder="1234 5678 9012 3456"
+              onChange={updateCard}
               maxLength={19}
               autoComplete="cc-number"
               inputMode="numeric"
-              aria-describedby={errors.cardNumber ? 'card-error' : undefined}
-              aria-invalid={!!errors.cardNumber}
-              className={fieldClass('cardNumber')}
+              errorId={errors.cardNumber ? 'card-error' : undefined}
+              hasError={!!errors.cardNumber}
             />
             {errors.cardNumber && <p id="card-error" role="alert" className="text-red-600 text-xs mt-1">{errors.cardNumber}</p>}
           </div>

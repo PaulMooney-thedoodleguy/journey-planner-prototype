@@ -4,11 +4,14 @@ import { getDisruptionsService } from '../../services/transport.service';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
-import { getSeverityColor, getSeverityBadge, getSeverityHex } from '../../utils/transport';
+import { getSeverityColor, getSeverityBadge, getSeverityHex, getTransportIcon, getModeHex } from '../../utils/transport';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { Disruption, MapMarker, MapPolyline, MapCircle, Severity } from '../../types';
+import type { Disruption, MapMarker, MapPolyline, MapCircle, Severity, TransportMode } from '../../types';
 
 const SEVERITIES: Array<'all' | Severity> = ['all', 'critical', 'high', 'medium', 'low'];
+
+const DISRUPTION_MODES: TransportMode[] = ['train', 'tube', 'bus', 'tram', 'ferry'];
+const ALL_MODES = new Set<TransportMode>(DISRUPTION_MODES);
 
 // Zoom out enough to show England when no disruption is selected
 const DEFAULT_CENTER = { lat: 52.5, lng: -1.5 };
@@ -27,8 +30,22 @@ export default function ServiceUpdatesPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [search, setSearch] = useState('');
   const [severity, setSeverity] = useState<'all' | Severity>('all');
+  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(ALL_MODES);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   usePageTitle('Service Updates');
+
+  const toggleMode = (mode: TransportMode) => {
+    setActiveModes(prev => {
+      const next = new Set(prev);
+      if (next.has(mode)) {
+        // Keep at least one mode active
+        if (next.size > 1) next.delete(mode);
+      } else {
+        next.add(mode);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));
@@ -36,12 +53,13 @@ export default function ServiceUpdatesPage() {
 
   const filtered = disruptions.filter(d => {
     const matchesSev = severity === 'all' || d.severity === severity;
+    const matchesMode = activeModes.has(d.mode ?? 'train');
     const q = search.toLowerCase();
     const matchesSearch = !q
       || d.title.toLowerCase().includes(q)
       || d.location.toLowerCase().includes(q)
       || d.operator.toLowerCase().includes(q);
-    return matchesSev && matchesSearch;
+    return matchesSev && matchesMode && matchesSearch;
   });
 
   const selectedDisruption = disruptions.find(d => d.id === selectedId) ?? null;
@@ -156,7 +174,7 @@ export default function ServiceUpdatesPage() {
             <div
               role="group"
               aria-label="Filter by severity"
-              className="flex gap-2 flex-wrap mb-5"
+              className="flex gap-2 flex-wrap mb-3"
             >
               {SEVERITIES.map(sev => (
                 <button
@@ -168,6 +186,35 @@ export default function ServiceUpdatesPage() {
                   {sev.charAt(0).toUpperCase() + sev.slice(1)}
                 </button>
               ))}
+            </div>
+
+            {/* Mode filter */}
+            <div
+              role="group"
+              aria-label="Filter by transport mode"
+              className="flex gap-2 flex-wrap mb-5"
+            >
+              {DISRUPTION_MODES.map(mode => {
+                const active = activeModes.has(mode);
+                const hex = getModeHex(mode);
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => toggleMode(mode)}
+                    aria-pressed={active}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border"
+                    style={active
+                      ? { backgroundColor: hex, borderColor: hex, color: 'white' }
+                      : { backgroundColor: 'white', borderColor: '#d1d5db', color: '#6b7280' }
+                    }
+                  >
+                    <span className="w-3.5 h-3.5 flex items-center justify-center" aria-hidden="true">
+                      {getTransportIcon(mode)}
+                    </span>
+                    <span className="capitalize">{mode}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Results */}

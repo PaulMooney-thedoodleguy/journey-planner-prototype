@@ -16,6 +16,8 @@ interface StationAutocompleteProps {
   id: string;
   value: string;
   onChange: (value: string) => void;
+  /** When provided, renders a Material Design floating label instead of relying on an external <label>. */
+  label?: string;
   placeholder?: string;
   errorId?: string;
   hasError?: boolean;
@@ -37,12 +39,14 @@ export default function StationAutocomplete({
   id,
   value,
   onChange,
+  label,
   placeholder,
   errorId,
   hasError,
   inputClassName,
 }: StationAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const [apiSuggestions, setApiSuggestions] = useState<StationOption[]>([]);
@@ -125,6 +129,25 @@ export default function StationAutocomplete({
     inputRef.current?.focus();
   };
 
+  // Derived floating state for the label (when label prop is used)
+  const isFloating = isFocused || value.length > 0;
+
+  // When label prop is used, derive border/input classes internally
+  const labelledBorderClass = label
+    ? hasError
+      ? 'border-red-500'
+      : isFocused
+        ? 'border-brand'
+        : 'border-gray-300'
+    : undefined;
+  const labelColorClass = label
+    ? hasError
+      ? 'text-red-500'
+      : isFocused
+        ? 'text-brand'
+        : 'text-gray-500'
+    : undefined;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
     if (!USE_REAL_API) setIsOpen(true);
@@ -149,6 +172,7 @@ export default function StationAutocomplete({
   };
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    setIsFocused(false);
     // Keep open if focus moves into the portal listbox (mouse hover / click).
     if (!listboxRef.current?.contains(e.relatedTarget as Node)) {
       setIsOpen(false);
@@ -209,19 +233,40 @@ export default function StationAutocomplete({
           type="text"
           value={value}
           onChange={handleChange}
-          onFocus={() => value.length >= 2 && setIsOpen(true)}
+          onFocus={() => {
+            setIsFocused(true);
+            if (value.length >= 2) setIsOpen(true);
+          }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={label ? undefined : placeholder}
           autoComplete="off"
           aria-autocomplete="list"
           aria-controls={shouldShowDropdown ? listboxId : undefined}
           aria-activedescendant={highlightedIndex >= 0 ? `${id}-option-${highlightedIndex}` : undefined}
           aria-describedby={errorId}
           aria-invalid={hasError || undefined}
-          className={inputClassName}
+          className={
+            label
+              ? `block w-full px-3 py-3.5 border-2 rounded-lg bg-transparent focus:outline-none transition-colors ${labelledBorderClass}`
+              : inputClassName
+          }
         />
       </div>
+
+      {/* Floating label (Material Design outlined style) — only when label prop is provided */}
+      {label && (
+        <label
+          htmlFor={id}
+          className={`absolute left-2 px-1 bg-white pointer-events-none select-none origin-left transition-all duration-150 ${labelColorClass} ${
+            isFloating
+              ? '-top-2.5 translate-y-0 text-xs'
+              : 'top-1/2 -translate-y-1/2 text-sm'
+          }`}
+        >
+          {label}
+        </label>
+      )}
 
       {listbox}
     </div>

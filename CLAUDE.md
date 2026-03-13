@@ -4,7 +4,7 @@ AI assistant guidance for the `journey-planner-prototype` codebase.
 
 ## Project Overview
 
-Mobile-first UK transport planning app built with React 18, TypeScript, Tailwind CSS v3, and Vite 6. Covers the full journey flow: search → results → checkout → ticket wallet, plus live departures and service updates. All data is currently served from mock services; the service layer is designed to be swapped to real TfL/National Rail APIs via an environment variable.
+Mobile-first UK transport planning app built with React 18, TypeScript, Tailwind CSS v3, and Vite 6. Covers the full journey flow: search → results → checkout → ticket wallet, plus live departures and service updates. Branded as **Naviquate**. Mock services are the default; real journey planning via **OpenTripPlanner 2 (OTP2)** + **TfL StopPoint Search API** is implemented and activated with `VITE_USE_MOCK_DATA=false`.
 
 ---
 
@@ -81,8 +81,14 @@ src/
 │   ├── tickets/                   # AnimatedTicketView, QRCodeView
 │   └── departures/                # LiveTrackingMap
 ├── services/
-│   ├── transport.service.ts       # Service interfaces + factory functions
-│   └── mock/                      # MockJourneyService, MockDeparturesService, MockDisruptionsService
+│   ├── transport.service.ts       # Service interfaces + factory functions (mock/real toggle)
+│   ├── mock/                      # MockJourneyService, MockDeparturesService, MockDisruptionsService
+│   ├── otp/                       # OTP2 real journey service
+│   │   ├── otp-types.ts           # TypeScript types for OTP2 REST response
+│   │   ├── otp-mappers.ts         # Pure functions: OtpItinerary → Journey, OtpLeg → JourneyLeg
+│   │   └── otp-journey.service.ts # OtpJourneyService implements IJourneyService via OTP2 REST
+│   └── tfl/
+│       └── tfl-stop-search.ts     # resolveStationCoord + searchStations via TfL StopPoint Search API
 ├── data/                          # Static mock datasets (stations, journeys, departures, disruptions)
 └── utils/
     ├── formatting.ts              # formatDate, formatPrice, generateReference
@@ -148,13 +154,13 @@ const results = await service.searchJourneys(params);
 import { MockJourneyService } from './mock/journey.mock';
 ```
 
-**Switching to real APIs**: Set `VITE_USE_MOCK_DATA=false` and implement the three interfaces:
+**Switching to real APIs**: Set `VITE_USE_MOCK_DATA=false`.
 
-- `IJourneyService` → TfL / National Rail journey planner
-- `IDeparturesService` → TfL real-time departures
-- `IDisruptionsService` → TfL / National Rail disruptions feed
+- `IJourneyService` → **implemented** — `OtpJourneyService` in `src/services/otp/otp-journey.service.ts`
+- `IDeparturesService` → **mock only** — TfL `/StopPoint/{id}/Arrivals` wired in Phase 2
+- `IDisruptionsService` → **mock only** — TfL `/Line/{id}/Status` wired in Phase 2
 
-The factory functions in `transport.service.ts` contain `TODO` comments marking where real implementations should be wired in.
+`getJourneyService()` in `transport.service.ts` dynamically imports `OtpJourneyService` when `VITE_USE_MOCK_DATA=false`. `getDeparturesService()` and `getDisruptionsService()` still throw in real mode.
 
 ---
 
@@ -164,7 +170,9 @@ Copy `.env.example` to `.env` before running locally.
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_USE_MOCK_DATA` | `true` | Set to `false` to use real APIs |
+| `VITE_USE_MOCK_DATA` | `true` | Set to `false` to activate OTP2 + TfL real services |
+| `VITE_OTP_API_URL` | `http://localhost:8080` | OTP2 server base URL |
+| `VITE_TFL_API_KEY` | — | TfL API key — free at https://api.tfl.gov.uk; used for StopPoint Search |
 | `VITE_GOOGLE_MAPS_API_KEY` | — | Optional; currently unused (Leaflet/OSM is the active map) |
 
 **Never commit `.env` files.** The pre-commit hook blocks `.env`, `.env.local`, `.env.*.local`, `.env.development`, `.env.production`, and `.env.staging`.
@@ -188,8 +196,8 @@ Run `npm run typecheck` to validate — it runs `tsc --noEmit`.
 ## Styling Conventions
 
 - **Tailwind CSS v3** utility classes throughout
-- Primary brand colour: `indigo-600` / `indigo-700` (hover)
-- Page background: `bg-gradient-to-br from-blue-50 to-indigo-100`
+- Primary brand colour: `brand` = `#4E5866` (Naviquate Grey); accent `niq-teal` = `#54BF8A`
+- Page background: `bg-niq-ice` (`#F6F6F6`)
 - All pages are wrapped in `<PageShell>` — use `fullHeight` for map-heavy pages, `centered` for standalone content
 - Inline `<style>` tags are acceptable within components for keyframe animations (see `SearchPage.tsx`)
 - Always respect `prefers-reduced-motion`: set `animation-duration: 0.01ms !important` inside a `@media (prefers-reduced-motion: reduce)` block when adding CSS animations
@@ -362,9 +370,47 @@ No SVG file is needed — icons come from `react-icons/md`.
 
 ---
 
+## GTFS / Real Data Integration
+
+Architecture: **OTP2 (OpenTripPlanner 2)** ingests GTFS feeds and exposes a REST journey planner. The app calls it via `OtpJourneyService`.
+
+### OTP2 local setup
+
+```
+C:\OTP\
+  otp-shaded-2.8.1.jar     # Downloaded — run with Android Studio JRE (Java 21)
+  otp-data\                # Place GTFS ZIP(s) here before building graph
+```
+
+**Java:** Use `C:/Program Files/Android/Android Studio/jbr/bin/java.exe` (Java 21). The system default `java` is still 11.
+
+**GTFS feed source:** [BODS (Bus Open Data Service)](https://data.bus-data.dft.gov.uk/) — free account required. Download London region GTFS → save to `C:\OTP\otp-data\`. Covers London buses. Tube/DLR/Overground not yet available as direct GTFS (TfL doesn't publish a native GTFS feed).
+
+**Build graph** (run once after placing GTFS ZIPs, takes 5–10 min for London):
+```bash
+"C:/Program Files/Android/Android Studio/jbr/bin/java.exe" -Xmx4G -jar C:/OTP/otp-shaded-2.8.1.jar --buildStreet --build --save C:/OTP/otp-data
+```
+
+**Start server:**
+```bash
+"C:/Program Files/Android/Android Studio/jbr/bin/java.exe" -Xmx4G -jar C:/OTP/otp-shaded-2.8.1.jar --load C:/OTP/otp-data
+```
+REST API at `http://localhost:8080/otp/routers/default/plan`.
+
+### StationAutocomplete (real mode)
+When `VITE_USE_MOCK_DATA=false`, `StationAutocomplete` calls `searchStations()` from `tfl-stop-search.ts` with a 300 ms debounce. Mock mode (synchronous `MAP_STATIONS` filter) is unchanged.
+
+### Known gaps (Phase 2)
+- **Fares:** OTP2 has no fare engine. Prices are placeholder `{ single: 2.50, return: 4.50 }` × passenger multiplier. TfL Fares API (`/Fare/From/{from}/To/{to}`) deferred.
+- **Departures/Disruptions:** Still mocked. Phase 2: TfL `/StopPoint/{id}/Arrivals` + `/Line/{id}/Status`.
+- **Tube/DLR/Overground in graph:** Not available — TfL doesn't publish native GTFS. Graph covers buses only until a converter is added.
+- **Non-London bus stops in autocomplete:** TfL StopPoint Search is London-only. OTP2 geocoder can supplement for national stops in Phase 2.
+
+---
+
 ## Known Limitations / Future Work
 
-- Real TfL / National Rail API integrations are not implemented (all services are mocked)
+- Tube/DLR/Overground GTFS not available from TfL natively — bus-only graph for now
 - Google Maps integration is wired up in `MapViewProps` but the active implementation uses react-leaflet with OpenStreetMap tiles
 - PWA service worker is only active in production builds (`devOptions.enabled: false`); test offline behaviour with `npm run build && npm run preview`
 - Lighthouse CI uploads reports to `temporary-public-storage` (no account needed, reports expire); switch to a self-hosted LHCI server for persistent score history

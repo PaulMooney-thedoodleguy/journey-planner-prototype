@@ -91,23 +91,27 @@ function createModeClusterIcon(hex: string) {
  * Stops only appear at zoom >= 12 so the cluster groups stay meaningful
  * at city level.
  */
-const STATIC_BUS_ZOOM = 12;
+const STATIC_BUS_ZOOM = 15; // Only render at street level — keeps viewport count to ~50 stops
 type BusRow = [string, string, number, number]; // [id, name, lat, lng]
 
 function StaticBusStopLayer() {
   const map = useMap();
   const allStopsRef = useRef<BusRow[]>([]);
   const [visibleStops, setVisibleStops] = useState<BusRow[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateVisible = useCallback(() => {
-    if (map.getZoom() < STATIC_BUS_ZOOM || allStopsRef.current.length === 0) {
-      setVisibleStops([]);
-      return;
-    }
-    const bounds = map.getBounds().pad(0.3);
-    setVisibleStops(
-      allStopsRef.current.filter(([,, lat, lng]) => bounds.contains([lat, lng] as [number, number]))
-    );
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (map.getZoom() < STATIC_BUS_ZOOM || allStopsRef.current.length === 0) {
+        setVisibleStops([]);
+        return;
+      }
+      const bounds = map.getBounds().pad(0.2);
+      setVisibleStops(
+        allStopsRef.current.filter(([,, lat, lng]) => bounds.contains([lat, lng] as [number, number]))
+      );
+    }, 300);
   }, [map]);
 
   useMapEvents({ zoomend: updateVisible, moveend: updateVisible });
@@ -373,9 +377,9 @@ export default function MapView({
           />
         ))}
 
-        {/* Static bus stops — viewport-culled, mock mode only */}
-        {showBusStops && !USE_REAL_API && <StaticBusStopLayer />}
-        {/* Live bus stops from TfL API — real mode only */}
+        {/* Static bus stops — viewport-culled, always shown */}
+        {showBusStops && <StaticBusStopLayer />}
+        {/* Live bus stops from TfL API — augments static layer at close zoom */}
         {USE_REAL_API && <BusStopLayer />}
 
         {/* Journey route polyline (brand colour, solid) */}

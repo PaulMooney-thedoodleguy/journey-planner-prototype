@@ -114,7 +114,7 @@ function mapLeg(leg: TflLeg): JourneyLeg {
     duration: fmtDuration(leg.duration),
     platform: leg.departurePoint.platformName || undefined,
     stops: leg.path?.stopPoints?.length,
-    intermediateStops: leg.path?.stopPoints?.map(s => s.commonName),
+    intermediateStops: leg.path?.stopPoints?.map(s => s.name),
     fromLat: leg.departurePoint.lat,
     fromLng: leg.departurePoint.lon,
     toLat: leg.arrivalPoint.lat,

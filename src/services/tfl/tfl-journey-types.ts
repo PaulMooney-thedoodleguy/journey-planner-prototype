@@ -48,8 +48,18 @@ export interface TflStopPoint {
 
 export interface TflPath {
   lineString?: string;
-  stopPoints?: TflStopPoint[];
+  stopPoints?: TflPathStop[];
   elevation?: unknown[];
+}
+
+// Intermediate stops in path.stopPoints are Identifier objects — different from TflStopPoint
+export interface TflPathStop {
+  id: string;
+  name: string;
+  uri?: string;
+  type?: string;
+  routeType?: string;
+  status?: string;
 }
 
 export interface TflRouteOption {

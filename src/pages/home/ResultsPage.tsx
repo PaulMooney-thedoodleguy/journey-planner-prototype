@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Info } from 'lucide-react';
+import { Bookmark, Info, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
 import JourneyCard from '../../components/journey/JourneyCard';
@@ -17,7 +17,7 @@ import type { Journey, Disruption, MapMarker } from '../../types';
 type SortOption = 'departs' | 'fastest' | 'cheapest' | 'greenest';
 
 const SORT_LABELS: Record<SortOption, string> = {
-  departs: 'Departs',
+  departs: 'Departs soonest',
   fastest: 'Fastest',
   cheapest: 'Cheapest',
   greenest: 'Greenest',
@@ -74,6 +74,19 @@ export default function ResultsPage() {
   usePageTitle('Journey Results');
 
   const [sortBy, setSortBy] = useState<SortOption>('departs');
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  // Close the sort dropdown when the user clicks outside it
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+        setSortOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
 
   // Fetch all disruptions once — match to individual journeys when rendering
@@ -84,10 +97,34 @@ export default function ResultsPage() {
       .catch(() => {}); // non-critical; silently ignore if unavailable
   }, []);
 
-  // Guard against empty array — Math.min() with no args returns Infinity
-  const lowestCO2 = journeyResults.length > 0 ? Math.min(...journeyResults.map(j => j.co2)) : null;
-  const lowestPrice = journeyResults.length > 0 ? Math.min(...journeyResults.map(j => j.price[searchParams.ticketType])) : null;
-  const shortestDuration = journeyResults.length > 0 ? Math.min(...journeyResults.map(j => getDurationMins(j.duration))) : null;
+  // Pick exactly one winner per badge.
+  // If multiple journeys tie on the primary criterion, prefer the one that also
+  // wins on a secondary criterion (e.g. fastest-but-also-greenest beats plain fastest).
+  // Falls back to the first tied candidate if secondaries don't break the tie.
+  const pickWinner = (
+    results: Journey[],
+    primary: (j: Journey) => number,
+    secondaries: Array<(j: Journey) => number>,
+  ): number | null => {
+    if (!results.length) return null;
+    const best = Math.min(...results.map(primary));
+    let candidates = results.filter(j => primary(j) === best);
+    for (const sec of secondaries) {
+      if (candidates.length === 1) break;
+      const bestSec = Math.min(...candidates.map(sec));
+      const narrowed = candidates.filter(j => sec(j) === bestSec);
+      if (narrowed.length < candidates.length) candidates = narrowed;
+    }
+    return candidates[0].id;
+  };
+
+  const price    = (j: Journey) => j.price[searchParams.ticketType];
+  const duration = (j: Journey) => getDurationMins(j.duration);
+  const co2      = (j: Journey) => j.co2;
+
+  const fastestId  = pickWinner(journeyResults, duration, [co2, price]);
+  const cheapestId = pickWinner(journeyResults, price,    [co2, duration]);
+  const greenestId = pickWinner(journeyResults, co2,      [duration, price]);
 
   // Sort a copy — badges always reflect the full set so sort order doesn't change badge assignment
   const sortedResults = [...journeyResults].sort((a, b) => {
@@ -189,27 +226,48 @@ export default function ResultsPage() {
                 {searchParams.from} → {searchParams.to} • {displayDate}
               </p>
 
-              {/* Sort controls — only shown when there are results to sort */}
+              {/* Sort control — only shown when there are results to sort */}
               {journeyResults.length > 0 && (
-                <div
-                  role="group"
-                  aria-label="Sort journeys by"
-                  className="flex flex-wrap gap-2 mb-6"
-                >
-                  {(Object.keys(SORT_LABELS) as SortOption[]).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setSortBy(opt)}
-                      aria-pressed={sortBy === opt}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${
-                        sortBy === opt
-                          ? 'bg-brand text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-brand-light border border-gray-200'
-                      }`}
+                <div ref={sortRef} className="relative mb-6 inline-block">
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={sortOpen}
+                    aria-label={`Sort by: ${SORT_LABELS[sortBy]}`}
+                    onClick={() => setSortOpen(o => !o)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border bg-white text-sm font-medium text-gray-700 transition ${
+                      sortOpen ? 'border-brand ring-2 ring-brand ring-offset-0' : 'border-gray-200 hover:border-brand'
+                    }`}
+                  >
+                    <ArrowUpDown className="w-4 h-4 text-brand shrink-0" aria-hidden="true" />
+                    {SORT_LABELS[sortBy]}
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${sortOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                  </button>
+
+                  {sortOpen && (
+                    <ul
+                      role="listbox"
+                      aria-label="Sort journeys by"
+                      className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden"
                     >
-                      {SORT_LABELS[opt]}
-                    </button>
-                  ))}
+                      {(Object.keys(SORT_LABELS) as SortOption[]).map(opt => {
+                        const isSelected = sortBy === opt;
+                        return (
+                          <li
+                            key={opt}
+                            role="option"
+                            aria-selected={isSelected}
+                            onMouseDown={() => { setSortBy(opt); setSortOpen(false); }}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer text-sm transition ${
+                              isSelected ? 'bg-brand text-white' : 'text-gray-700 hover:bg-brand-light'
+                            }`}
+                          >
+                            {SORT_LABELS[opt]}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
               )}
 
@@ -239,9 +297,9 @@ export default function ResultsPage() {
                       <JourneyCard
                         journey={j}
                         ticketType={searchParams.ticketType}
-                        isGreenest={j.co2 === lowestCO2}
-                        isFastest={getDurationMins(j.duration) === shortestDuration}
-                        isCheapest={j.price[searchParams.ticketType] === lowestPrice}
+                        isGreenest={j.id === greenestId}
+                        isFastest={j.id === fastestId}
+                        isCheapest={j.id === cheapestId}
                         onSelect={handleExpand}
                         disruption={getDisruptionForJourney(j)}
                       />

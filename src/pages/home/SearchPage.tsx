@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation, Search, MapPin, Plus, Minus } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
@@ -8,11 +8,12 @@ import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import StationAutocomplete from '../../components/journey/StationAutocomplete';
 import OutlinedField from '../../components/ui/OutlinedField';
+import ModeFilter from '../../components/ui/ModeFilter';
 import SavedJourneyCard from '../../components/journey/SavedJourneyCard';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { getRecentSearches, addRecentSearch, removeRecentSearch } from '../../utils/recentSearches';
-import type { JourneySearchParams, MapMarker, PassengerType } from '../../types';
+import type { JourneySearchParams, MapMarker, PassengerType, TransportMode } from '../../types';
 
 /*
  * Z-index stacking order on this page:
@@ -34,6 +35,21 @@ const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
   label: s.name,
 }));
 
+const JOURNEY_MODES: TransportMode[] = ['train', 'tube', 'bus', 'tram', 'ferry'];
+const SEARCH_MODES_KEY = 'search-active-modes';
+
+function loadSearchModes(): Set<TransportMode> {
+  try {
+    const stored = localStorage.getItem(SEARCH_MODES_KEY);
+    if (stored) {
+      const arr = JSON.parse(stored) as TransportMode[];
+      const valid = arr.filter(m => JOURNEY_MODES.includes(m));
+      if (valid.length > 0) return new Set(valid);
+    }
+  } catch { /* ignore */ }
+  return new Set<TransportMode>(JOURNEY_MODES);
+}
+
 const PASSENGER_LABELS: Record<PassengerType, string> = {
   adult:    'Adult',
   child:    'Child (50% off)',
@@ -50,6 +66,12 @@ export default function SearchPage() {
   const [showVia, setShowVia] = useState(!!searchParams.via);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches());
+  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(loadSearchModes);
+
+  // Persist mode selection
+  useEffect(() => {
+    localStorage.setItem(SEARCH_MODES_KEY, JSON.stringify([...activeModes]));
+  }, [activeModes]);
 
   // Ref for programmatic focus on GDS error summary (WCAG 3.3.1)
   const errorSummaryRef = useRef<HTMLDivElement>(null);
@@ -331,6 +353,16 @@ export default function SearchPage() {
                 </div>
               </fieldset>
 
+              {/* Transport modes */}
+              <div>
+                <span className="block text-sm font-medium text-gray-700 mb-2">Transport modes</span>
+                <ModeFilter
+                  availableModes={JOURNEY_MODES}
+                  activeModes={activeModes}
+                  onChange={setActiveModes}
+                />
+              </div>
+
               {searchError && (
                 <p role="alert" className="text-red-600 text-sm text-center bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                   {searchError}
@@ -377,7 +409,7 @@ export default function SearchPage() {
         {/* Map — mobile: absolute full-screen background; desktop: fills remaining right side */}
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
-            markers={mapMarkers}
+            markers={mapMarkers.filter(m => activeModes.has(m.type))}
             onMarkerClick={handleMapStationSelect}
             height="100%"
           />

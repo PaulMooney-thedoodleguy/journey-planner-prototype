@@ -4,7 +4,8 @@ import { getDisruptionsService } from '../../services/transport.service';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
-import { getSeverityColor, getSeverityBadge, getSeverityHex, getTransportIcon, getModeHex } from '../../utils/transport';
+import { getSeverityColor, getSeverityBadge, getSeverityHex } from '../../utils/transport';
+import ModeFilter from '../../components/ui/ModeFilter';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { Disruption, MapMarker, MapPolyline, MapCircle, Severity, TransportMode } from '../../types';
 
@@ -46,18 +47,7 @@ export default function ServiceUpdatesPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   usePageTitle('Service Updates');
 
-  const toggleMode = (mode: TransportMode) => {
-    setActiveModes(prev => {
-      const next = new Set(prev);
-      if (next.has(mode)) {
-        // Keep at least one mode active
-        if (next.size > 1) next.delete(mode);
-      } else {
-        next.add(mode);
-      }
-      return next;
-    });
-  };
+  const handleModeChange = (next: Set<TransportMode>) => setActiveModes(next);
 
   // Persist mode filter to localStorage whenever it changes
   useEffect(() => {
@@ -89,9 +79,9 @@ export default function ServiceUpdatesPage() {
     ? radiusToZoom(selectedDisruption.affectedRadius ?? 5000)
     : DEFAULT_ZOOM;
 
-  // All disruption markers (used when nothing is selected)
+  // All disruption markers filtered by active modes (used when nothing is selected)
   const allDisruptionMarkers: MapMarker[] = disruptions
-    .filter(d => d.lat != null && d.lng != null)
+    .filter(d => d.lat != null && d.lng != null && activeModes.has(d.mode ?? 'train'))
     .map(d => ({
       id:    d.id,
       lat:   d.lat!,
@@ -206,32 +196,12 @@ export default function ServiceUpdatesPage() {
             </div>
 
             {/* Mode filter */}
-            <div
-              role="group"
-              aria-label="Filter by transport mode"
-              className="flex gap-2 flex-wrap mb-5"
-            >
-              {DISRUPTION_MODES.map(mode => {
-                const active = activeModes.has(mode);
-                const hex = getModeHex(mode);
-                return (
-                  <button
-                    key={mode}
-                    onClick={() => toggleMode(mode)}
-                    aria-pressed={active}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition border"
-                    style={active
-                      ? { backgroundColor: hex, borderColor: hex, color: 'white' }
-                      : { backgroundColor: 'white', borderColor: '#d1d5db', color: '#6b7280' }
-                    }
-                  >
-                    <span className="w-3.5 h-3.5 flex items-center justify-center" aria-hidden="true">
-                      {getTransportIcon(mode)}
-                    </span>
-                    <span className="capitalize">{mode}</span>
-                  </button>
-                );
-              })}
+            <div className="mb-5">
+              <ModeFilter
+                availableModes={DISRUPTION_MODES}
+                activeModes={activeModes}
+                onChange={handleModeChange}
+              />
             </div>
 
             {/* Results */}

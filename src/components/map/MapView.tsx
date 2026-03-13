@@ -2,6 +2,8 @@ import { useState, createElement, useEffect, useRef } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
+import 'leaflet.markercluster';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import { SlidersHorizontal, X } from 'lucide-react';
 import type { MapViewProps, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
@@ -50,6 +52,36 @@ function stationIcon(type: TransportMode, colorOverride?: string) {
   });
   _iconCache.set(cacheKey, icon);
   return icon;
+}
+
+/**
+ * Returns a cluster icon factory for a specific transport mode.
+ * Each cluster bubble is a circle using that mode's hex colour,
+ * with a white count label — keeping clusters mode-pure and visually distinct.
+ *
+ * Size tiers:  < 10 → 34px  |  10–99 → 42px  |  100+ → 50px
+ */
+function createModeClusterIcon(hex: string) {
+  return function iconFactory(cluster: L.MarkerCluster): L.DivIcon {
+    const count = cluster.getChildCount();
+    const size = count < 10 ? 34 : count < 100 ? 42 : 50;
+    const fontSize = count < 10 ? 13 : count < 100 ? 14 : 15;
+    return L.divIcon({
+      html: `<div style="
+        width:${size}px;height:${size}px;
+        border-radius:50%;
+        background:${hex};
+        box-shadow:0 2px 8px rgba(0,0,0,0.22);
+        display:flex;align-items:center;justify-content:center;
+        color:white;font-size:${fontSize}px;font-weight:700;
+        font-family:'Sofia Pro','Nunito',Arial,system-ui,sans-serif;
+        letter-spacing:-0.3px;
+      ">${count}</div>`,
+      className: '',
+      iconSize: L.point(size, size, true),
+      iconAnchor: [size / 2, size / 2],
+    });
+  };
 }
 
 const BUS_ZOOM_THRESHOLD = 15;
@@ -107,20 +139,23 @@ function BusStopLayer() {
   useEffect(() => { fetchAround(map); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <>
+    <MarkerClusterGroup
+      iconCreateFunction={createModeClusterIcon(getModeHex('bus'))}
+      chunkedLoading
+      disableClusteringAtZoom={16}
+      maxClusterRadius={50}
+      showCoverageOnHover={false}
+      zoomToBoundsOnClick
+      animate
+    >
       {busMarkers.map(m => (
-        <Marker
-          key={m.id}
-          position={[m.lat, m.lng]}
-          icon={stationIcon('bus')}
-          title={m.label}
-        >
+        <Marker key={m.id} position={[m.lat, m.lng]} icon={stationIcon('bus')} title={m.label}>
           <Tooltip direction="top" offset={[0, -20]} opacity={1}>
             <span className="font-medium text-sm">{m.label}</span>
           </Tooltip>
         </Marker>
       ))}
-    </>
+    </MarkerClusterGroup>
   );
 }
 
@@ -207,26 +242,47 @@ export default function MapView({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {visibleMarkers.map(m => (
-          <Marker
-            key={m.id}
-            position={[m.lat, m.lng]}
-            icon={stationIcon(m.type, m.color)}
-            title={m.label ?? m.type}
-            eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
-          >
-            {m.label && (
-              <>
-                <Tooltip direction="top" offset={[0, -20]} opacity={1}>
-                  <span className="font-medium text-sm">{m.label}</span>
-                </Tooltip>
-                <Popup>
-                  <span className="font-medium text-sm">{m.label}</span>
-                </Popup>
-              </>
-            )}
-          </Marker>
-        ))}
+        {Object.entries(
+          visibleMarkers.reduce<Record<string, typeof visibleMarkers>>((acc, m) => {
+            (acc[m.type] ??= []).push(m);
+            return acc;
+          }, {})
+        ).map(([mode, modeMarkers]) => {
+          const hex = getModeHex(mode as TransportMode);
+          return (
+            <MarkerClusterGroup
+              key={mode}
+              iconCreateFunction={createModeClusterIcon(hex)}
+              chunkedLoading
+              disableClusteringAtZoom={routePolyline.length >= 2 ? 1 : 16}
+              maxClusterRadius={60}
+              showCoverageOnHover={false}
+              zoomToBoundsOnClick
+              animate
+            >
+              {modeMarkers.map(m => (
+                <Marker
+                  key={m.id}
+                  position={[m.lat, m.lng]}
+                  icon={stationIcon(m.type, m.color)}
+                  title={m.label ?? m.type}
+                  eventHandlers={{ click: () => onMarkerClick?.(m.id) }}
+                >
+                  {m.label && (
+                    <>
+                      <Tooltip direction="top" offset={[0, -20]} opacity={1}>
+                        <span className="font-medium text-sm">{m.label}</span>
+                      </Tooltip>
+                      <Popup>
+                        <span className="font-medium text-sm">{m.label}</span>
+                      </Popup>
+                    </>
+                  )}
+                </Marker>
+              ))}
+            </MarkerClusterGroup>
+          );
+        })}
         {/* Disruption area circles */}
         {circles.map(c => (
           <Circle

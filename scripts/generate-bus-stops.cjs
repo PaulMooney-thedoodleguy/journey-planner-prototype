@@ -21,8 +21,9 @@ const path = require('path');
 const STOPS_TXT = path.join(__dirname, 'gtfs-tmp', 'stops.txt');
 const OUT_FILE  = path.join(__dirname, '..', 'src', 'data', 'bus-stops.json');
 
-const LAT_MIN = 49, LAT_MAX = 61;
-const LNG_MIN = -8, LNG_MAX = 2;
+// Greater London + M25 corridor (~25K stops, 1.3 MB)
+const LAT_MIN = 51.28, LAT_MAX = 51.72;
+const LNG_MIN = -0.56, LNG_MAX = 0.36;
 
 console.log('Reading', STOPS_TXT, '...');
 const raw = fs.readFileSync(STOPS_TXT, 'utf8');

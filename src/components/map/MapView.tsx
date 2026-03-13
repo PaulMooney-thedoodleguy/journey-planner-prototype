@@ -254,8 +254,8 @@ export default function MapView({
               key={mode}
               iconCreateFunction={createModeClusterIcon(hex)}
               chunkedLoading
-              disableClusteringAtZoom={routePolyline.length >= 2 ? 1 : 16}
-              maxClusterRadius={60}
+              disableClusteringAtZoom={routePolyline.length >= 2 ? 1 : mode === 'bus' ? 18 : 16}
+              maxClusterRadius={mode === 'bus' ? 50 : 60}
               showCoverageOnHover={false}
               zoomToBoundsOnClick
               animate

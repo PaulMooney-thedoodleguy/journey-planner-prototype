@@ -29,9 +29,9 @@ export async function getJourneyService(): Promise<IJourneyService> {
     const { MockJourneyService } = await import('./mock/journey.mock');
     return new MockJourneyService();
   }
-  // OTP2 + TfL — active when VITE_USE_MOCK_DATA=false
-  const { OtpJourneyService } = await import('./otp/otp-journey.service');
-  return new OtpJourneyService();
+  // TfL Journey Planner API — active when VITE_USE_MOCK_DATA=false
+  const { TflJourneyService } = await import('./tfl/tfl-journey.service');
+  return new TflJourneyService();
 }
 
 export async function getDeparturesService(): Promise<IDeparturesService> {

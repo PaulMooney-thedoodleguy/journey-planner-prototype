@@ -74,21 +74,22 @@ export default function MapView({
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  // All modes active by default; lazy initializer runs once on mount
-  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(
-    () => new Set(availableModes)
-  );
+  // Track modes the user has explicitly turned off.
+  // activeModes is derived: everything available minus user-disabled.
+  // New modes that appear (e.g. after async data loads) start ON by default.
+  const [userDisabledModes, setUserDisabledModes] = useState<Set<TransportMode>>(new Set());
 
-  const allActive = availableModes.every(m => activeModes.has(m));
+  const activeModes = new Set(availableModes.filter(m => !userDisabledModes.has(m)));
+  const allActive = availableModes.length > 0 && availableModes.every(m => activeModes.has(m));
 
   const toggleMode = (mode: TransportMode) => {
-    setActiveModes(prev => {
+    setUserDisabledModes(prev => {
       const next = new Set(prev);
-      if (next.has(mode)) {
-        if (next.size === 1) return prev; // always keep at least one mode visible
-        next.delete(mode);
-      } else {
+      if (activeModes.has(mode)) {
+        if (activeModes.size === 1) return prev; // always keep at least one mode visible
         next.add(mode);
+      } else {
+        next.delete(mode);
       }
       return next;
     });
@@ -211,7 +212,7 @@ export default function MapView({
             >
               {/* All — activates every available mode */}
               <button
-                onClick={() => setActiveModes(new Set(availableModes))}
+                onClick={() => setUserDisabledModes(new Set())}
                 aria-pressed={allActive}
                 className={`flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition ${
                   allActive

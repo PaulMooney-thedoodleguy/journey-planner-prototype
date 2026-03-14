@@ -7,7 +7,7 @@ import OutlinedField from '../ui/OutlinedField';
 type Tab = 'signin' | 'register';
 
 export default function LoginModal() {
-  const { loginModalOpen, closeLoginModal, isLoggedIn, login, register } = useAuthContext();
+  const { loginModalOpen, loginModalReason, closeLoginModal, isLoggedIn, login, register } = useAuthContext();
 
   const [isMounted,  setIsMounted]  = useState(false);
   const [isVisible,  setIsVisible]  = useState(false);
@@ -121,9 +121,20 @@ export default function LoginModal() {
         </button>
 
         {/* Brand */}
-        <div className="flex items-center justify-center gap-2.5 mb-6">
+        <div className="flex items-center justify-center gap-2.5 mb-3">
           <BrandLogo variant="dark" />
         </div>
+
+        {/* Context reason — shown when modal is triggered by a gated action */}
+        {loginModalReason ? (
+          <p className="text-sm text-center text-gray-600 mb-5 leading-snug">
+            {loginModalReason}
+          </p>
+        ) : (
+          <p className="text-sm text-center text-gray-500 mb-5">
+            Create a free account to book and manage your tickets.
+          </p>
+        )}
 
         {/* Tab toggle */}
         <div className="flex rounded-full bg-gray-100 p-1 mb-6" role="tablist" aria-label="Authentication options">

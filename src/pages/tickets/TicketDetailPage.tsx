@@ -7,13 +7,13 @@ import AnimatedTicketView from '../../components/tickets/AnimatedTicketView';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
-import { getRoutePolyline, getModeHex, getSeverityHex, getTransportIcon } from '../../utils/transport';
-import { ROUTE_STATION_COORDS, MAP_STATIONS } from '../../data/stations';
+import { lookupCoords, getModeHex, getSeverityHex, getTransportIcon } from '../../utils/transport';
+import { MAP_STATIONS } from '../../data/stations';
 import { MOCK_DEPARTURES } from '../../data/departures';
 import { getDisruptionsService } from '../../services/transport.service';
 import { formatDate } from '../../utils/formatting';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { MapMarker, Disruption } from '../../types';
+import type { MapMarker, MapPolyline, Disruption } from '../../types';
 
 const SEVERITY_CLASSES: Record<string, string> = {
   critical: 'bg-red-50 border-red-200 text-red-900',
@@ -94,10 +94,19 @@ export default function TicketDetailPage() {
     [disruptions, ticket]
   );
 
-  const routePolyline = useMemo(() =>
-    ticket?.journey.legs ? getRoutePolyline(ticket.journey.legs) : [],
-    [ticket]
-  );
+  const legPolylines: MapPolyline[] = useMemo(() => {
+    if (!ticket?.journey.legs) return [];
+    return ticket.journey.legs.map((leg, i) => {
+      const from = (leg.fromLat && leg.fromLng)
+        ? { lat: leg.fromLat, lng: leg.fromLng }
+        : lookupCoords(leg.from);
+      const to = (leg.toLat && leg.toLng)
+        ? { lat: leg.toLat, lng: leg.toLng }
+        : lookupCoords(leg.to);
+      const points = [from, to].filter(Boolean) as { lat: number; lng: number }[];
+      return { id: i, points, color: getModeHex(leg.mode), weight: 5 };
+    }).filter(p => p.points.length >= 2);
+  }, [ticket]);
 
   const routeMarkers: MapMarker[] = useMemo(() => {
     if (!ticket?.journey.legs) return [];
@@ -109,16 +118,20 @@ export default function TicketDetailPage() {
         ])
       ).values()
     ).flatMap(({ leg, name }) => {
-      const coord = ROUTE_STATION_COORDS[name];
+      const coord = (leg.fromLat && leg.from === name && leg.fromLng)
+        ? { lat: leg.fromLat, lng: leg.fromLng }
+        : (leg.toLat && leg.to === name && leg.toLng)
+        ? { lat: leg.toLat, lng: leg.toLng }
+        : lookupCoords(name);
       return coord ? [{ id: name, lat: coord.lat, lng: coord.lng, type: leg.mode, label: name }] : [];
     });
   }, [ticket]);
 
   const mapCenter = useMemo(() => {
-    if (routePolyline.length >= 2) return undefined; // FitBounds handles it
-    const coord = ticket ? ROUTE_STATION_COORDS[ticket.journey.from] : null;
+    if (legPolylines.length > 0) return undefined; // FitBounds handles it
+    const coord = ticket ? lookupCoords(ticket.journey.from) : null;
     return coord ?? { lat: 51.515, lng: -0.13 };
-  }, [ticket, routePolyline]);
+  }, [ticket, legPolylines]);
 
   const departureStationId = ticket ? findDepartureStationId(ticket.journey.from) : null;
 
@@ -309,7 +322,7 @@ export default function TicketDetailPage() {
             markers={routeMarkers}
             center={mapCenter}
             zoom={mapCenter ? 13 : undefined}
-            routePolyline={routePolyline}
+            polylines={legPolylines}
             height="100%"
           />
         </div>

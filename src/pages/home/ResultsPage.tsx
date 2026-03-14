@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, Info, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Bookmark, Info, ArrowUpDown, ChevronDown, Lock } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
+import { useAuthContext } from '../../context/AuthContext';
 import JourneyCard from '../../components/journey/JourneyCard';
 import JourneyDetailPanel from '../../components/journey/JourneyDetailPanel';
 import PageShell from '../../components/layout/PageShell';
@@ -36,8 +37,23 @@ export default function ResultsPage() {
   const navigate = useNavigate();
   const { journeyResults, searchParams, setSelectedJourney } = useJourneyContext();
   const { savedJourneys, addSavedJourney, removeSavedJourney } = useAppContext();
+  const { isLoggedIn, openLoginModal } = useAuthContext();
 
   const [expandedJourney, setExpandedJourney] = useState<Journey | null>(null);
+  const [signInBannerDismissed, setSignInBannerDismissed] = useState(false);
+
+  // Holds a journey the user tried to book while signed out — fulfilled after login
+  const pendingJourneyRef = useRef<Journey | null>(null);
+
+  // When the user signs in, complete any pending booking automatically
+  useEffect(() => {
+    if (isLoggedIn && pendingJourneyRef.current) {
+      const journey = pendingJourneyRef.current;
+      pendingJourneyRef.current = null;
+      setSelectedJourney(journey);
+      navigate('/checkout');
+    }
+  }, [isLoggedIn, navigate, setSelectedJourney]);
 
   const getSavedId = (j: Journey): string | undefined =>
     savedJourneys.find(sj => sj.journeyData?.id === j.id && sj.date === searchParams.date)?.id;
@@ -68,6 +84,11 @@ export default function ResultsPage() {
   const handleExpand = (journey: Journey) => setExpandedJourney(journey);
 
   const handleBook = (journey: Journey) => {
+    if (!isLoggedIn) {
+      pendingJourneyRef.current = journey;
+      openLoginModal('Sign in to book your ticket — your journey details will be saved to your wallet.');
+      return;
+    }
     setSelectedJourney(journey);
     navigate('/checkout');
   };
@@ -269,6 +290,31 @@ export default function ResultsPage() {
                       })}
                     </ul>
                   )}
+                </div>
+              )}
+
+              {/* Sign-in prompt — shown once per session for unauthenticated users */}
+              {!isLoggedIn && !signInBannerDismissed && journeyResults.length > 0 && (
+                <div className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-lg bg-brand-light border border-brand/20 text-sm">
+                  <Lock className="w-4 h-4 text-brand shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-brand font-medium">
+                    Sign in to book — your tickets will be saved to your wallet
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openLoginModal()}
+                    className="shrink-0 text-xs font-semibold text-white bg-brand hover:bg-brand-hover px-3 py-1.5 rounded-md transition"
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Dismiss sign-in prompt"
+                    onClick={() => setSignInBannerDismissed(true)}
+                    className="shrink-0 text-brand/50 hover:text-brand transition text-lg leading-none"
+                  >
+                    ×
+                  </button>
                 </div>
               )}
 

@@ -171,7 +171,8 @@ export default function JourneyDetailPanel({
                           {leg.intermediateStops.map((stop, si) => (
                             <li key={si} className="flex items-center gap-2 text-xs text-gray-500">
                               <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                              {stop}
+                              {stop.time && <span className="font-medium tabular-nums text-gray-700 shrink-0">{stop.time}</span>}
+                              <span>{stop.name}</span>
                             </li>
                           ))}
                         </ul>

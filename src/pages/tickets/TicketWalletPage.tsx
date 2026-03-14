@@ -5,19 +5,22 @@ import { useAppContext } from '../../context/AppContext';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
-import { getTransportIcon, getModeHex } from '../../utils/transport';
+import { getTransportIcon, getModeHex, lookupCoords } from '../../utils/transport';
 import { formatDate, getTicketStatus } from '../../utils/formatting';
 import { getDisruptionsService } from '../../services/transport.service';
+import tflStops from '../../data/tfl-stops.json';
 import { MAP_STATIONS } from '../../data/stations';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import type { TicketStatus } from '../../utils/formatting';
-import type { PurchasedTicket, Disruption, MapMarker } from '../../types';
+import type { PurchasedTicket, Disruption, MapMarker, MapPolyline, TransportMode } from '../../types';
 
-const mapMarkers: MapMarker[] = MAP_STATIONS.map(s => ({
+const TICKET_MAP_MODES: TransportMode[] = ['train', 'tube', 'bus', 'tram', 'ferry'];
+
+const allStopMarkers: MapMarker[] = tflStops.map(s => ({
   id: s.id,
-  lat: s.lat ?? 51.515,
-  lng: s.lng ?? -0.13,
-  type: s.type,
+  lat: s.lat,
+  lng: s.lng,
+  type: s.type as TransportMode,
   label: s.name,
 }));
 
@@ -112,6 +115,40 @@ export default function TicketWalletPage() {
     )[0];
     return { nextTicket: ticket, nextStationId: findDepartureStationId(ticket.journey.from) };
   }, [purchasedTickets]);
+
+  // Journey plan map data for the next/current ticket
+  const journeyMapPolylines: MapPolyline[] = useMemo(() => {
+    if (!nextTicket?.journey.legs) return [];
+    return nextTicket.journey.legs.map((leg, i) => {
+      const from = (leg.fromLat && leg.fromLng)
+        ? { lat: leg.fromLat, lng: leg.fromLng }
+        : lookupCoords(leg.from);
+      const to = (leg.toLat && leg.toLng)
+        ? { lat: leg.toLat, lng: leg.toLng }
+        : lookupCoords(leg.to);
+      const points = [from, to].filter(Boolean) as { lat: number; lng: number }[];
+      return { id: i, points, color: getModeHex(leg.mode), weight: 5 };
+    }).filter(p => p.points.length >= 2);
+  }, [nextTicket]);
+
+  const journeyMapMarkers: MapMarker[] = useMemo(() => {
+    if (!nextTicket?.journey.legs) return [];
+    return Array.from(
+      new Map(
+        nextTicket.journey.legs.flatMap(leg => [
+          [leg.from, { leg, name: leg.from }],
+          [leg.to,   { leg, name: leg.to   }],
+        ])
+      ).values()
+    ).flatMap(({ leg, name }) => {
+      const coord = (leg.fromLat && leg.from === name && leg.fromLng)
+        ? { lat: leg.fromLat, lng: leg.fromLng }
+        : (leg.toLat && leg.to === name && leg.toLng)
+        ? { lat: leg.toLat, lng: leg.toLng }
+        : lookupCoords(name);
+      return coord ? [{ id: name, lat: coord.lat, lng: coord.lng, type: leg.mode, label: name }] : [];
+    });
+  }, [nextTicket]);
 
   // CO₂ saved vs driving across all tickets
   const co2Stats = useMemo(() => {
@@ -395,7 +432,26 @@ export default function TicketWalletPage() {
         </div>
         </BottomDrawer>
         <div className="flex-1 relative">
-          <MapView markers={mapMarkers} height="100%" />
+          {nextTicket ? (
+            // Active/upcoming ticket — show only journey route stops + coloured leg lines
+            <MapView
+              markers={journeyMapMarkers}
+              polylines={journeyMapPolylines}
+              showBusStops={false}
+              height="100%"
+              onViewDepartures={(id) => navigate(`/departures/${id}`)}
+            />
+          ) : (
+            // No active ticket — show all stops exactly like Journey Planner
+            <MapView
+              markers={allStopMarkers}
+              filterModes={TICKET_MAP_MODES}
+              height="100%"
+              destinationLabel="Plan a journey"
+              onSetDestination={name => navigate('/', { state: { to: name } })}
+              onViewDepartures={(id) => navigate(`/departures/${id}`)}
+            />
+          )}
         </div>
       </div>
     </PageShell>

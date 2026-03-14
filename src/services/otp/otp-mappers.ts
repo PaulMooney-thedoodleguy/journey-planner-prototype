@@ -78,7 +78,12 @@ function mapLeg(leg: OtpLeg): JourneyLeg {
     duration: formatDuration(leg.duration),
     platform: leg.platformCode ?? undefined,
     stops: leg.intermediateStops?.length,
-    intermediateStops: leg.intermediateStops?.map(s => s.name),
+    intermediateStops: leg.intermediateStops?.map(s => ({
+      name: s.name,
+      time: s.departureTime ? formatTime(s.departureTime)
+          : s.arrivalTime  ? formatTime(s.arrivalTime)
+          : '',
+    })),
   };
 }
 

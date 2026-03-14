@@ -8,11 +8,12 @@ import TimetablePanel from '../../components/departures/TimetablePanel';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import { getTransportIcon, getModeHex } from '../../utils/transport';
+import ModeFilter from '../../components/ui/ModeFilter';
 import { MOCK_DEPARTURES, getServiceRoute, getRouteTimetable } from '../../data/departures';
 import { MAP_STATIONS } from '../../data/stations';
 import tflStops from '../../data/tfl-stops.json';
 import { usePageTitle } from '../../hooks/usePageTitle';
-import type { MapMarker, Station, Departure, TransportMode, RouteStop, RouteTimetable, TimetableStop } from '../../types';
+import type { MapMarker, MapViewport, Station, Departure, TransportMode, RouteStop, RouteTimetable, TimetableStop } from '../../types';
 
 /*
  * Z-index stacking order on this page:
@@ -158,6 +159,22 @@ function buildTflTimetable(
     },
     stopTimes,
   };
+}
+
+// ── Mode filter ───────────────────────────────────────────────────────────────
+const DEPARTURES_MODES: TransportMode[] = ['tube', 'train', 'bus'];
+const DEPARTURES_MODES_KEY = 'departures-active-modes';
+
+function loadDepartureModes(): Set<TransportMode> {
+  try {
+    const stored = localStorage.getItem(DEPARTURES_MODES_KEY);
+    if (stored) {
+      const arr = JSON.parse(stored) as TransportMode[];
+      const valid = arr.filter(m => DEPARTURES_MODES.includes(m));
+      if (valid.length > 0) return new Set(valid);
+    }
+  } catch { /* ignore */ }
+  return new Set<TransportMode>(DEPARTURES_MODES);
 }
 
 // Three-position drawer for stations and departure board views.
@@ -380,16 +397,56 @@ export default function DeparturesPage() {
   // Updated on map moveend via onCenterChange; derives the 12 nearest TfL
   // stops from tflStops.json so the list always reflects the visible map area.
 
-  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 51.515, lng: -0.13 });
+  // Initial viewport — approximate Central London at zoom 13.
+  // Replaced by real values as soon as ViewportWatcher fires on mount.
+  const [viewport, setViewport] = useState<MapViewport>({
+    center: { lat: 51.515, lng: -0.13 },
+    zoom: 13,
+    bounds: { north: 51.56, south: 51.47, east: -0.07, west: -0.19 },
+  });
+
+  const [activeModes, setActiveModes] = useState<Set<TransportMode>>(loadDepartureModes);
+
+  useEffect(() => {
+    localStorage.setItem(DEPARTURES_MODES_KEY, JSON.stringify([...activeModes]));
+  }, [activeModes]);
+
+  // Bus stops from bundled JSON — loaded once, same dataset StaticBusStopLayer uses.
+  // We keep the array in state so the useMemo below re-runs when it arrives.
+  const [busStops, setBusStops] = useState<[string, string, number, number][]>([]);
+  useEffect(() => {
+    import('../../data/bus-stops.json').then(mod => {
+      setBusStops(mod.default as [string, string, number, number][]);
+    });
+  }, []);
+
+  // Bus stop zoom threshold — matches StaticBusStopLayer (zoom ≥ 15).
+  const BUS_STOP_ZOOM = 15;
 
   const nearbyFromMap = useMemo<Station[]>(() => {
-    const { lat: cLat, lng: cLng } = mapCenter;
-    return [...tflStops]
-      .map(s => ({ s, d2: (s.lat - cLat) ** 2 + (s.lng - cLng) ** 2 }))
+    const { center: { lat: cLat, lng: cLng }, zoom, bounds } = viewport;
+    const { north, south, east, west } = bounds;
+
+    // Tube/train stops within the current viewport
+    const railStops = tflStops
+      .filter(s => activeModes.has(s.type as TransportMode))
+      .filter(s => s.lat >= south && s.lat <= north && s.lng >= west && s.lng <= east)
+      .map(s => ({ id: s.id, name: s.name, type: s.type as TransportMode, lat: s.lat, lng: s.lng,
+        d2: (s.lat - cLat) ** 2 + (s.lng - cLng) ** 2 }));
+
+    // Bus stops within viewport — only at zoom ≥ 15 (mirrors StaticBusStopLayer visibility)
+    const busInView: typeof railStops = activeModes.has('bus') && zoom >= BUS_STOP_ZOOM
+      ? busStops
+          .filter(([, , lat, lng]) => lat >= south && lat <= north && lng >= west && lng <= east)
+          .map(([id, name, lat, lng]) => ({ id, name, type: 'bus' as TransportMode, lat, lng,
+            d2: (lat - cLat) ** 2 + (lng - cLng) ** 2 }))
+      : [];
+
+    return [...railStops, ...busInView]
       .sort((a, b) => a.d2 - b.d2)
       .slice(0, 12)
-      .map(({ s }) => ({ id: s.id, name: s.name, type: s.type as TransportMode, lat: s.lat, lng: s.lng }));
-  }, [mapCenter]);
+      .map(({ d2: _d2, ...s }) => s);
+  }, [viewport, activeModes, busStops]);
 
   // ── View departures handler ───────────────────────────────────────────────
   // Receives id from onMarkerClick, and id+name+type from popup onViewDepartures.
@@ -903,6 +960,15 @@ export default function DeparturesPage() {
                   <MapPin className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>Nearby stations and stops</span>
                 </div>
+
+                <div className="mt-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Mode</p>
+                  <ModeFilter
+                    availableModes={DEPARTURES_MODES}
+                    activeModes={activeModes}
+                    onChange={setActiveModes}
+                  />
+                </div>
               </div>
 
               <div className="px-4 sm:px-6 py-3 space-y-2">
@@ -1112,11 +1178,14 @@ export default function DeparturesPage() {
           ) : (
             <MapView
               markers={allStopMarkers}
-              showBusStops
+              filterModes={DEPARTURES_MODES}
+              activeModes={activeModes}
+              onModeChange={setActiveModes}
+              showBusStops={activeModes.has('bus')}
               showPopups={false}
               onViewDepartures={handleViewDepartures}
               onMarkerClick={handleMarkerClick}
-              onCenterChange={setMapCenter}
+              onViewportChange={setViewport}
               height="100%"
               zoom={13}
             />

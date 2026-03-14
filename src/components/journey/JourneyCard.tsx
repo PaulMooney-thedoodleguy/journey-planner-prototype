@@ -17,6 +17,9 @@ interface JourneyCardProps {
 
 export default function JourneyCard({ journey: j, ticketType, isGreenest, isFastest, isCheapest, onSelect, disruption }: JourneyCardProps) {
   const [showLegs, setShowLegs] = useState(false);
+  const [expandedStops, setExpandedStops] = useState<Set<number>>(new Set());
+  const toggleStops = (i: number) =>
+    setExpandedStops(prev => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next; });
 
   const borderClass = 'border-gray-200 hover:border-gray-300';
 
@@ -188,6 +191,34 @@ export default function JourneyCard({ journey: j, ticketType, isGreenest, isFast
                               <><span>·</span><span>{leg.stops} stop{leg.stops !== 1 ? 's' : ''}</span></>
                             )}
                           </div>
+
+                          {/* Intermediate stops toggle */}
+                          {leg.intermediateStops && leg.intermediateStops.length > 0 && (() => {
+                            const isExpanded = expandedStops.has(i);
+                            return (
+                              <div className="mb-1">
+                                <button
+                                  onClick={() => toggleStops(i)}
+                                  aria-expanded={isExpanded}
+                                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition"
+                                >
+                                  <ChevronDown className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                  {isExpanded ? 'Hide' : 'Show'} {leg.intermediateStops.length} intermediate stop{leg.intermediateStops.length !== 1 ? 's' : ''}
+                                </button>
+                                {isExpanded && (
+                                  <ul className="mt-1.5 space-y-1 pl-2 border-l-2 border-gray-100 ml-1">
+                                    {leg.intermediateStops.map((stop, si) => (
+                                      <li key={si} className="flex items-center gap-2 text-xs text-gray-500">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                                        {stop.time && <span className="font-medium tabular-nums text-gray-700 shrink-0">{stop.time}</span>}
+                                        <span>{stop.name}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            );
+                          })()}
                           <p className="text-sm font-semibold">
                             {leg.arrival} <span className="text-gray-400 font-normal">·</span> {leg.to}
                           </p>

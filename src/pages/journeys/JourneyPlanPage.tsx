@@ -7,9 +7,8 @@ import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { formatDate } from '../../utils/formatting';
-import { getTransportIcon, getModeHex, getRoutePolyline } from '../../utils/transport';
-import { ROUTE_STATION_COORDS } from '../../data/stations';
-import type { JourneyLeg, MapMarker, PurchasedTicket } from '../../types';
+import { getTransportIcon, getModeHex, lookupCoords } from '../../utils/transport';
+import type { JourneyLeg, MapMarker, MapPolyline, PurchasedTicket } from '../../types';
 
 export default function JourneyPlanPage() {
   const { savedJourneyId } = useParams();
@@ -58,8 +57,19 @@ export default function JourneyPlanPage() {
     return next;
   });
 
-  // Build route polyline + waypoint markers from journey legs
-  const routePolyline = journey?.legs ? getRoutePolyline(journey.legs) : [];
+  // Build per-leg coloured polylines and waypoint markers from journey legs
+  const legPolylines: MapPolyline[] = journey?.legs
+    ? journey.legs.map((leg, i) => {
+        const from = (leg.fromLat && leg.fromLng)
+          ? { lat: leg.fromLat, lng: leg.fromLng }
+          : lookupCoords(leg.from);
+        const to = (leg.toLat && leg.toLng)
+          ? { lat: leg.toLat, lng: leg.toLng }
+          : lookupCoords(leg.to);
+        const points = [from, to].filter(Boolean) as { lat: number; lng: number }[];
+        return { id: i, points, color: getModeHex(leg.mode), weight: 5 };
+      }).filter(p => p.points.length >= 2)
+    : [];
 
   const routeMarkers: MapMarker[] = journey?.legs
     ? Array.from(
@@ -70,7 +80,11 @@ export default function JourneyPlanPage() {
           ])
         ).values()
       ).flatMap(({ leg, name }) => {
-        const coord = ROUTE_STATION_COORDS[name];
+        const coord = (leg.fromLat && leg.from === name && leg.fromLng)
+          ? { lat: leg.fromLat, lng: leg.fromLng }
+          : (leg.toLat && leg.to === name && leg.toLng)
+          ? { lat: leg.toLat, lng: leg.toLng }
+          : lookupCoords(name);
         return coord ? [{ id: name, lat: coord.lat, lng: coord.lng, type: leg.mode, label: name }] : [];
       })
     : [];
@@ -212,7 +226,8 @@ export default function JourneyPlanPage() {
                                     {leg.intermediateStops.map((stop, si) => (
                                       <li key={si} className="flex items-center gap-2 text-xs text-gray-500">
                                         <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                                        {stop}
+                                        {stop.time && <span className="font-medium tabular-nums text-gray-700 shrink-0">{stop.time}</span>}
+                                        <span>{stop.name}</span>
                                       </li>
                                     ))}
                                   </ul>
@@ -253,7 +268,7 @@ export default function JourneyPlanPage() {
         <div className="absolute inset-0 pb-20 lg:static lg:flex-1 lg:pb-0">
           <MapView
             markers={routeMarkers}
-            routePolyline={routePolyline}
+            polylines={legPolylines}
             height="100%"
           />
         </div>

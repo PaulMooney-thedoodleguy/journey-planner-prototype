@@ -32,5 +32,7 @@ export interface OtpPlace {
   name: string;
   lat: number;
   lon: number;
-  stopId?: string; // NaPTAN / GTFS stop_id
+  stopId?: string;    // NaPTAN / GTFS stop_id
+  arrivalTime?: number;   // unix ms — present on intermediate stops
+  departureTime?: number; // unix ms — present on intermediate stops
 }

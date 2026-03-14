@@ -44,10 +44,7 @@ export async function getDeparturesService(): Promise<IDeparturesService> {
 }
 
 export async function getDisruptionsService(): Promise<IDisruptionsService> {
-  if (useMock) {
-    const { MockDisruptionsService } = await import('./mock/disruptions.mock');
-    return new MockDisruptionsService();
-  }
-  // TODO: Wire up TfL / National Rail disruptions feed here
-  throw new Error('Real disruptions service not yet implemented');
+  // Always use mock — real TfL /Line/{id}/Status implementation is Phase 2
+  const { MockDisruptionsService } = await import('./mock/disruptions.mock');
+  return new MockDisruptionsService();
 }

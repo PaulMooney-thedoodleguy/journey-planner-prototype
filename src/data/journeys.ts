@@ -15,7 +15,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     co2: 8.2,
     carCo2: 58,
     legs: [
-      { mode: 'train', operator: 'LNER', from: 'London Kings Cross', to: 'Manchester Piccadilly', departure: '09:00', arrival: '11:15', duration: '2h 15m', platform: '5', stops: 2, intermediateStops: ['Peterborough', 'York'] },
+      { mode: 'train', operator: 'LNER', from: 'London Kings Cross', to: 'Manchester Piccadilly', departure: '09:00', arrival: '11:15', duration: '2h 15m', platform: '5', stops: 2, intermediateStops: [{ name: 'Peterborough', time: '09:52' }, { name: 'York', time: '10:41' }] },
     ],
   },
   {
@@ -32,7 +32,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     co2: 9.1,
     carCo2: 58,
     legs: [
-      { mode: 'train', operator: 'Avanti West Coast', from: 'London Kings Cross', to: 'Birmingham New Street', departure: '10:30', arrival: '12:00', duration: '1h 30m', platform: '11', stops: 1, intermediateStops: ['Coventry'] },
+      { mode: 'train', operator: 'Avanti West Coast', from: 'London Kings Cross', to: 'Birmingham New Street', departure: '10:30', arrival: '12:00', duration: '1h 30m', platform: '11', stops: 1, intermediateStops: [{ name: 'Coventry', time: '11:47' }] },
       { mode: 'train', operator: 'Avanti West Coast', from: 'Birmingham New Street', to: 'Manchester Piccadilly', departure: '12:15', arrival: '13:05', duration: '50m', platform: '3', stops: 0 },
     ],
   },
@@ -50,7 +50,7 @@ export const MOCK_JOURNEYS: Journey[] = [
     co2: 18.5,
     carCo2: 58,
     legs: [
-      { mode: 'bus', operator: 'National Express', from: 'London Victoria Coach Station', to: 'Manchester Coach Station', departure: '08:00', arrival: '13:30', duration: '5h 30m', stops: 3, intermediateStops: ['Milton Keynes', 'Birmingham', 'Stoke-on-Trent'] },
+      { mode: 'bus', operator: 'National Express', from: 'London Victoria Coach Station', to: 'Manchester Coach Station', departure: '08:00', arrival: '13:30', duration: '5h 30m', stops: 3, intermediateStops: [{ name: 'Milton Keynes', time: '09:25' }, { name: 'Birmingham', time: '11:05' }, { name: 'Stoke-on-Trent', time: '12:30' }] },
     ],
   },
   {
@@ -67,9 +67,9 @@ export const MOCK_JOURNEYS: Journey[] = [
     co2: 7.8,
     carCo2: 58,
     legs: [
-      { mode: 'tube', operator: 'TfL', from: 'Kings Cross St. Pancras', to: 'Euston', departure: '09:15', arrival: '09:20', duration: '5m', stops: 1, intermediateStops: ['Warren Street'] },
-      { mode: 'train', operator: 'Avanti West Coast', from: 'London Euston', to: 'Crewe', departure: '09:35', arrival: '11:25', duration: '1h 50m', platform: '7', stops: 2, intermediateStops: ['Milton Keynes', 'Stoke-on-Trent'] },
-      { mode: 'train', operator: 'TransPennine Express', from: 'Crewe', to: 'Manchester Piccadilly', departure: '11:45', arrival: '12:45', duration: '1h 0m', platform: '2', stops: 1, intermediateStops: ['Stockport'] },
+      { mode: 'tube', operator: 'TfL', from: 'Kings Cross St. Pancras', to: 'Euston', departure: '09:15', arrival: '09:20', duration: '5m', stops: 1, intermediateStops: [{ name: 'Warren Street', time: '09:18' }] },
+      { mode: 'train', operator: 'Avanti West Coast', from: 'London Euston', to: 'Crewe', departure: '09:35', arrival: '11:25', duration: '1h 50m', platform: '7', stops: 2, intermediateStops: [{ name: 'Milton Keynes Central', time: '10:12' }, { name: 'Stoke-on-Trent', time: '11:08' }] },
+      { mode: 'train', operator: 'TransPennine Express', from: 'Crewe', to: 'Manchester Piccadilly', departure: '11:45', arrival: '12:45', duration: '1h 0m', platform: '2', stops: 1, intermediateStops: [{ name: 'Stockport', time: '12:35' }] },
     ],
   },
   {
@@ -87,9 +87,9 @@ export const MOCK_JOURNEYS: Journey[] = [
     carCo2: 58,
     requiresMultipleTickets: true,
     legs: [
-      { mode: 'bus', operator: 'Arriva', from: 'Kings Cross', to: 'Liverpool Street', departure: '10:00', arrival: '10:30', duration: '30m', stops: 4, intermediateStops: ['Islington', 'Shoreditch', 'Bethnal Green', 'Whitechapel'] },
-      { mode: 'train', operator: 'Greater Anglia', from: 'Liverpool Street', to: 'Cambridge', departure: '10:45', arrival: '11:50', duration: '1h 5m', platform: '8', stops: 3, intermediateStops: ['Tottenham Hale', 'Harlow Town', "Bishop's Stortford"] },
-      { mode: 'train', operator: 'CrossCountry', from: 'Cambridge', to: 'Manchester Piccadilly', departure: '12:10', arrival: '14:15', duration: '2h 5m', platform: '1', stops: 5, intermediateStops: ['Ely', 'Peterborough', 'Leicester', 'Derby', 'Sheffield'] },
+      { mode: 'bus', operator: 'Arriva', from: 'Kings Cross', to: 'Liverpool Street', departure: '10:00', arrival: '10:30', duration: '30m', stops: 4, intermediateStops: [{ name: 'Islington', time: '10:07' }, { name: 'Shoreditch', time: '10:14' }, { name: 'Bethnal Green', time: '10:21' }, { name: 'Whitechapel', time: '10:26' }] },
+      { mode: 'train', operator: 'Greater Anglia', from: 'Liverpool Street', to: 'Cambridge', departure: '10:45', arrival: '11:50', duration: '1h 5m', platform: '8', stops: 3, intermediateStops: [{ name: 'Tottenham Hale', time: '10:58' }, { name: 'Harlow Town', time: '11:19' }, { name: "Bishop's Stortford", time: '11:33' }] },
+      { mode: 'train', operator: 'CrossCountry', from: 'Cambridge', to: 'Manchester Piccadilly', departure: '12:10', arrival: '14:15', duration: '2h 5m', platform: '1', stops: 5, intermediateStops: [{ name: 'Ely', time: '12:27' }, { name: 'Peterborough', time: '12:53' }, { name: 'Leicester', time: '13:22' }, { name: 'Derby', time: '13:43' }, { name: 'Sheffield', time: '14:03' }] },
     ],
     tickets: [
       { id: 1, operator: 'Arriva', color: '#00AEEF', logo: '🚌', services: ['Bus: Kings Cross to Liverpool Street'], price: 2.50 },

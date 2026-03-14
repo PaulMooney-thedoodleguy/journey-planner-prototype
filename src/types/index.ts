@@ -15,7 +15,7 @@ export interface JourneyLeg {
   duration: string;
   platform?: string;
   stops?: number;
-  intermediateStops?: string[];
+  intermediateStops?: { name: string; time: string }[];
   /** Coordinates populated by real API — used for route polyline when station
    *  names don't match the hardcoded ROUTE_STATION_COORDS lookup table. */
   fromLat?: number;
@@ -188,6 +188,12 @@ export interface MapCircle {
   color: string;
 }
 
+export interface MapViewport {
+  center: { lat: number; lng: number };
+  zoom: number;
+  bounds: { north: number; south: number; east: number; west: number };
+}
+
 export interface MapViewProps {
   center?: { lat: number; lng: number };
   zoom?: number;
@@ -207,6 +213,8 @@ export interface MapViewProps {
   onMarkerClick?: (id: string | number) => void;
   /** Called when the user clicks "Set as destination" inside a stop popup. */
   onSetDestination?: (name: string) => void;
+  /** Override the "Set as destination" button label in stop popups. */
+  destinationLabel?: string;
   /** Called when the user clicks "View departures" inside a stop popup.
    *  name and type are the stop's display label and transport mode — always
    *  provided so callers can construct a Station even for stops not in any
@@ -214,6 +222,9 @@ export interface MapViewProps {
   onViewDepartures?: (id: string | number, name?: string, type?: TransportMode) => void;
   /** Called on map moveend with the new centre coordinates. */
   onCenterChange?: (center: { lat: number; lng: number }) => void;
+  /** Called on map moveend/zoomend with full viewport (center, zoom, bounds).
+   *  Use instead of onCenterChange when zoom-sensitive list updates are needed. */
+  onViewportChange?: (viewport: MapViewport) => void;
   /** When false, marker popups are suppressed and clicks fire callbacks directly.
    *  Defaults to true. Set false on the Departures map. */
   showPopups?: boolean;

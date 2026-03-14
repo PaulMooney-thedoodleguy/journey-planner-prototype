@@ -4,8 +4,8 @@ import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet.markercluster';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import { SlidersHorizontal, X, ZoomIn } from 'lucide-react';
-import type { MapViewProps, TransportMode } from '../../types';
+import { Filter, X, ZoomIn } from 'lucide-react';
+import type { MapViewProps, MapViewport, TransportMode } from '../../types';
 import ModeIcon, { ICONS } from '../icons/ModeIcon';
 import { getModeHex } from '../../utils/transport';
 import { MODE_CONFIG } from '../../config/brand';
@@ -94,9 +94,10 @@ function createModeClusterIcon(hex: string) {
 const STATIC_BUS_ZOOM = 15; // Only render at street level — keeps viewport count to ~50 stops
 type BusRow = [string, string, number, number]; // [id, name, lat, lng]
 
-function StaticBusStopLayer({ onSetDestination, onViewDepartures, showPopups = true }: {
+function StaticBusStopLayer({ onSetDestination, onViewDepartures, destinationLabel, showPopups = true }: {
   onSetDestination?: (name: string) => void;
   onViewDepartures?: (id: string | number, name?: string, type?: TransportMode) => void;
+  destinationLabel?: string;
   showPopups?: boolean;
 }) {
   const map = useMap();
@@ -155,6 +156,7 @@ function StaticBusStopLayer({ onSetDestination, onViewDepartures, showPopups = t
                 type="bus"
                 onSetDestination={onSetDestination}
                 onViewDepartures={onViewDepartures}
+                destinationLabel={destinationLabel}
               />
             </Popup>
           )}
@@ -170,13 +172,14 @@ function StaticBusStopLayer({ onSetDestination, onViewDepartures, showPopups = t
  * Closes the popup before firing the action callback so the map feels responsive.
  */
 function StopPopupContent({
-  id, name, type, onSetDestination, onViewDepartures,
+  id, name, type, onSetDestination, onViewDepartures, destinationLabel = 'Set as destination',
 }: {
   id: string | number;
   name: string;
   type: TransportMode;
   onSetDestination?: (name: string) => void;
   onViewDepartures?: (id: string | number, name?: string, type?: TransportMode) => void;
+  destinationLabel?: string;
 }) {
   const map = useMap();
   const hex = getModeHex(type);
@@ -198,7 +201,7 @@ function StopPopupContent({
               style={{ ...btnBase, backgroundColor: '#4E5866', color: 'white' }}
               onClick={() => { map.closePopup(); onSetDestination(name); }}
             >
-              Set as destination
+              {destinationLabel}
             </button>
           )}
           {onViewDepartures && (
@@ -223,6 +226,27 @@ function CenterWatcher({ onChange }: { onChange: (c: { lat: number; lng: number 
   return null;
 }
 
+function emitViewport(map: L.Map, cb: (v: MapViewport) => void) {
+  const c = map.getCenter();
+  const b = map.getBounds();
+  cb({
+    center: { lat: c.lat, lng: c.lng },
+    zoom: map.getZoom(),
+    bounds: { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() },
+  });
+}
+
+/** Fires onViewportChange on moveend and zoomend, and once on mount. */
+function ViewportWatcher({ onChange }: { onChange: (v: MapViewport) => void }) {
+  const map = useMapEvents({
+    moveend() { emitViewport(map, onChange); },
+    zoomend() { emitViewport(map, onChange); },
+  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { emitViewport(map, onChange); }, []);
+  return null;
+}
+
 /** Null-rendering component that fires a callback whenever the map zoom changes. */
 function ZoomWatcher({ onZoom }: { onZoom: (zoom: number) => void }) {
   const map = useMap();
@@ -239,9 +263,10 @@ const USE_REAL_API = import.meta.env.VITE_USE_MOCK_DATA === 'false';
  * and cached by snapped grid cell to avoid duplicate requests.
  * Only active when VITE_USE_MOCK_DATA=false.
  */
-function BusStopLayer({ onSetDestination, onViewDepartures, showPopups = true }: {
+function BusStopLayer({ onSetDestination, onViewDepartures, destinationLabel, showPopups = true }: {
   onSetDestination?: (name: string) => void;
   onViewDepartures?: (id: string | number, name?: string, type?: TransportMode) => void;
+  destinationLabel?: string;
   showPopups?: boolean;
 }) {
   const [busMarkers, setBusMarkers] = useState<{ id: string; lat: number; lng: number; label: string }[]>([]);
@@ -314,6 +339,7 @@ function BusStopLayer({ onSetDestination, onViewDepartures, showPopups = true }:
                 type="bus"
                 onSetDestination={onSetDestination}
                 onViewDepartures={onViewDepartures}
+                destinationLabel={destinationLabel}
               />
             </Popup>
           )}
@@ -331,7 +357,9 @@ export default function MapView({
   onMarkerClick,
   onSetDestination,
   onViewDepartures,
+  destinationLabel,
   onCenterChange,
+  onViewportChange,
   height = '100%',
   center,
   zoom,
@@ -469,6 +497,7 @@ export default function MapView({
                         type={m.type as TransportMode}
                         onSetDestination={onSetDestination}
                         onViewDepartures={onViewDepartures}
+                        destinationLabel={destinationLabel}
                       />
                     </Popup>
                   )}
@@ -511,10 +540,11 @@ export default function MapView({
         {/* Dismiss zoom toast once user reaches the bus stop threshold */}
         <ZoomWatcher onZoom={handleZoomForToast} />
         {onCenterChange && <CenterWatcher onChange={onCenterChange} />}
+        {onViewportChange && <ViewportWatcher onChange={onViewportChange} />}
         {/* Static bus stops — viewport-culled, always shown */}
-        {showBusStops && <StaticBusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} showPopups={showPopups} />}
+        {showBusStops && <StaticBusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} destinationLabel={destinationLabel} showPopups={showPopups} />}
         {/* Live bus stops from TfL API — augments static layer at close zoom */}
-        {USE_REAL_API && <BusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} showPopups={showPopups} />}
+        {USE_REAL_API && <BusStopLayer onSetDestination={onSetDestination} onViewDepartures={onViewDepartures} destinationLabel={destinationLabel} showPopups={showPopups} />}
 
         {/* Journey route polyline (brand colour, solid) */}
         {routePolyline.length >= 2 ? (
@@ -550,9 +580,9 @@ export default function MapView({
           >
             {isFilterOpen
               ? <X className="w-4 h-4" aria-hidden="true" />
-              : <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+              : <Filter className="w-4 h-4" aria-hidden="true" />
             }
-            <span>{isFilterOpen ? 'Close' : 'More'}</span>
+            <span>{isFilterOpen ? 'Close' : 'Filter'}</span>
           </button>
 
           {/* Expanded filter panel */}

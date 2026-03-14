@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Navigation, Search, MapPin, Plus, Minus } from 'lucide-react';
 import { useJourneyContext } from '../../context/JourneyContext';
 import { useAppContext } from '../../context/AppContext';
@@ -58,6 +58,7 @@ const PASSENGER_LABELS: Record<PassengerType, string> = {
 
 export default function SearchPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { searchParams, submitSearch, isSearching, searchError } = useJourneyContext();
   const { savedJourneys, removeSavedJourney, reorderSavedJourney } = useAppContext();
   usePageTitle('Plan Your Journey');
@@ -67,6 +68,13 @@ export default function SearchPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [recentSearches, setRecentSearches] = useState(() => getRecentSearches());
   const [activeModes, setActiveModes] = useState<Set<TransportMode>>(loadSearchModes);
+
+  // Pre-populate destination from router state (e.g. "Plan a journey" from map popup)
+  useEffect(() => {
+    const to = (location.state as { to?: string } | null)?.to;
+    if (to) setLocalParams(prev => ({ ...prev, to }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Persist mode selection
   useEffect(() => {

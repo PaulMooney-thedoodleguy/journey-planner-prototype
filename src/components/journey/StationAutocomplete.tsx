@@ -55,8 +55,15 @@ export default function StationAutocomplete({
   const listboxRef = useRef<HTMLUListElement>(null);
   const inputRef   = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Prevents onFocus and the debounced API effect from reopening the dropdown
-  // immediately after the user selects an option.
+  // Tracks whether the input is currently focused — readable inside effect closures
+  // without stale-capture issues. Used to gate API-driven setIsOpen(true) so that
+  // programmatic value changes (e.g. "Set as destination" from the map) never open
+  // the dropdown when the user isn't actively typing.
+  const isFocusedRef = useRef(false);
+  // Set to true by selectStation; consumed (and cleared) by the debounce callback so
+  // the first API response after a selection is silently discarded. NOT cleared in
+  // onFocus — previously doing so was the root cause of the "reopen after selection"
+  // bug because onFocus runs before the 300 ms debounce fires.
   const justSelectedRef = useRef(false);
 
   // In mock mode derive options synchronously; in real mode use debounced API state.
@@ -84,15 +91,21 @@ export default function StationAutocomplete({
     }
 
     debounceRef.current = setTimeout(async () => {
+      // Consume a pending selection-flag first — the user selected an option so
+      // this API response should be silently discarded regardless of focus state.
       if (justSelectedRef.current) {
         justSelectedRef.current = false;
         return;
       }
+      // Don't open the dropdown if the input isn't currently focused. This prevents
+      // programmatic value changes (e.g. "Set as destination" from the map popup)
+      // from triggering the dropdown when the user hasn't typed anything.
+      if (!isFocusedRef.current) return;
       try {
         const { searchStations } = await import('../../services/tfl/tfl-stop-search');
         const results = await searchStations(value);
         setApiSuggestions(results.map(r => ({ id: r.id, name: r.name, type: r.type })));
-        setIsOpen(true);
+        if (isFocusedRef.current) setIsOpen(true);
       } catch {
         setApiSuggestions([]);
       }
@@ -159,6 +172,7 @@ export default function StationAutocomplete({
     : undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    justSelectedRef.current = false; // user started typing — clear any pending selection flag
     onChange(e.target.value);
     if (!USE_REAL_API) setIsOpen(true);
     setHighlightedIndex(-1);
@@ -183,6 +197,7 @@ export default function StationAutocomplete({
 
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
+    isFocusedRef.current = false;
     // Keep open if focus moves into the portal listbox (mouse hover / click).
     if (!listboxRef.current?.contains(e.relatedTarget as Node)) {
       setIsOpen(false);
@@ -245,10 +260,10 @@ export default function StationAutocomplete({
           onChange={handleChange}
           onFocus={() => {
             setIsFocused(true);
-            if (justSelectedRef.current) {
-              justSelectedRef.current = false;
-              return;
-            }
+            isFocusedRef.current = true;
+            // If a selection was just made, don't reopen the dropdown.
+            // Do NOT clear justSelectedRef here — the debounce needs to consume it.
+            if (justSelectedRef.current) return;
             if (value.length >= 2) setIsOpen(true);
           }}
           onBlur={handleBlur}

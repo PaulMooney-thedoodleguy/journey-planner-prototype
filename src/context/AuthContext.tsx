@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useRef } from 'react';
 import type { UserProfile } from '../types';
 import {
   loadUser, saveUser, clearCurrentUser,
@@ -14,7 +14,8 @@ interface AuthContextValue {
   updateProfile: (updates: Partial<Pick<UserProfile, 'name' | 'email' | 'homeStation' | 'defaultRailcard'>>) => void;
   clearAllData: () => void;
   loginModalOpen: boolean;
-  openLoginModal: () => void;
+  loginModalReason: string | null;
+  openLoginModal: (reason?: string) => void;
   closeLoginModal: () => void;
 }
 
@@ -23,9 +24,25 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(loadUser);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginModalReason, setLoginModalReason] = useState<string | null>(null);
 
-  const openLoginModal  = () => setLoginModalOpen(true);
-  const closeLoginModal = () => setLoginModalOpen(false);
+  // P1-C: capture the element that triggered the modal so focus can return on close
+  const triggerElementRef = useRef<Element | null>(null);
+
+  const openLoginModal = (reason?: string) => {
+    triggerElementRef.current = document.activeElement;
+    setLoginModalReason(reason ?? null);
+    setLoginModalOpen(true);
+  };
+
+  const closeLoginModal = () => {
+    setLoginModalOpen(false);
+    // Return focus after the modal's close transition (~200 ms) — WCAG 2.4.3
+    const trigger = triggerElementRef.current;
+    if (trigger && 'focus' in trigger) {
+      setTimeout(() => (trigger as HTMLElement).focus(), 210);
+    }
+  };
 
   function login(email: string, _password: string): string | null {
     const users = loadUsers();
@@ -81,7 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, register, logout, updateProfile, clearAllData, loginModalOpen, openLoginModal, closeLoginModal }}>
+    <AuthContext.Provider value={{
+      user, isLoggedIn: !!user, login, register, logout, updateProfile, clearAllData,
+      loginModalOpen, loginModalReason, openLoginModal, closeLoginModal,
+    }}>
       {children}
     </AuthContext.Provider>
   );

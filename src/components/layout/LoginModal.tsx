@@ -20,6 +20,7 @@ export default function LoginModal() {
   const [error,        setError]        = useState<string | null>(null);
 
   const emailRef = useRef<HTMLInputElement>(null);
+  const cardRef  = useRef<HTMLDivElement>(null);
 
   // Mount/unmount with CSS transition
   useEffect(() => {
@@ -41,12 +42,24 @@ export default function LoginModal() {
     if (isVisible) emailRef.current?.focus();
   }, [isVisible]);
 
-  // Scroll lock + Escape key
+  // Scroll lock + Escape key + focus trap
   useEffect(() => {
     if (!isMounted) return;
     document.body.style.overflow = 'hidden';
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') closeLoginModal();
+      if (e.key === 'Escape') { closeLoginModal(); return; }
+      if (e.key !== 'Tab') return;
+      const focusable = cardRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last  = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+      }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => {
@@ -64,8 +77,9 @@ export default function LoginModal() {
     setTab(next);
     setError(null);
     setName('');
-    setEmail('');
+    // email is preserved so the user doesn't have to retype it
     setPassword('');
+    setShowPassword(false);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -87,10 +101,10 @@ export default function LoginModal() {
   return (
     // z-[3500] — above UpdatePrompt (z-[3000]), below skip link (z-[9999])
     <div
-      className="fixed inset-0 z-[3500] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[3500] flex items-end sm:items-center justify-center p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label={tab === 'signin' ? 'Sign in' : 'Create account'}
+      aria-labelledby="login-modal-title"
     >
       {/* Backdrop */}
       <div
@@ -103,9 +117,10 @@ export default function LoginModal() {
         aria-hidden="true"
       />
 
-      {/* Modal card — scales from top-right (where the trigger button lives) */}
+      {/* Modal card — bottom-sheet on mobile, centred card on sm+ */}
       <div
-        className={`relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 sm:p-8 transition-none ${
+        ref={cardRef}
+        className={`relative w-full max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto transition-none ${
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1'
         }`}
         style={{ transition: 'var(--modal-transition)', transformOrigin: 'top right' }}
@@ -119,6 +134,11 @@ export default function LoginModal() {
         >
           <X className="w-5 h-5" aria-hidden="true" />
         </button>
+
+        {/* Accessible dialog title — visually hidden, referenced by aria-labelledby */}
+        <h2 id="login-modal-title" className="sr-only">
+          {tab === 'signin' ? 'Sign in' : 'Create account'}
+        </h2>
 
         {/* Brand */}
         <div className="flex items-center justify-center gap-2.5 mb-3">

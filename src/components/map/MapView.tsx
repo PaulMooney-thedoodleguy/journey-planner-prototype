@@ -364,6 +364,7 @@ export default function MapView({
   center,
   zoom,
   routePolyline = [],
+  routeColor = '#4f46e5',
   polylines = [],
   circles = [],
   showBusStops = true,
@@ -552,7 +553,7 @@ export default function MapView({
             <FitBounds points={routePolyline.map(p => [p.lat, p.lng] as [number, number])} />
             <Polyline
               positions={routePolyline.map(p => [p.lat, p.lng] as [number, number])}
-              pathOptions={{ color: '#4f46e5', weight: 4, opacity: 0.85 }}
+              pathOptions={{ color: routeColor, weight: 4, opacity: 0.85 }}
             />
           </>
         ) : (

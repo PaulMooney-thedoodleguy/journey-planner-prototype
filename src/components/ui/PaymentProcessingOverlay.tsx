@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { MdTrain } from 'react-icons/md';
 
 interface Props {
@@ -11,17 +11,25 @@ const GRAY_TRACK = '#e5e7eb';
 const DURATION = 1.85; // seconds — total animation duration before onComplete fires at 2s
 
 export default function PaymentProcessingOverlay({ onComplete }: Props) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const timer = setTimeout(onComplete, 2000);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
+  // Move focus into the dialog on mount (WCAG 2.4.3)
+  useEffect(() => {
+    requestAnimationFrame(() => cardRef.current?.focus());
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-[4000] flex items-center justify-center p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', animation: `overlayIn 0.2s ease both` }}
-      aria-live="assertive"
-      aria-label="Processing payment"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="payment-processing-title"
     >
       <style>{`
         @keyframes overlayIn {
@@ -69,12 +77,17 @@ export default function PaymentProcessingOverlay({ onComplete }: Props) {
           @keyframes haloPulse   { from{opacity:1} to{opacity:1} }
           @keyframes cardIn      { from{opacity:1} to{opacity:1} }
           @keyframes overlayIn   { from{opacity:1} to{opacity:1} }
+          @keyframes dot1        { 0%,100%{opacity:1} }
+          @keyframes dot2        { 0%,100%{opacity:1} }
+          @keyframes dot3        { 0%,100%{opacity:1} }
         }
       `}</style>
 
       {/* Card */}
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden"
+        ref={cardRef}
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden focus:outline-none"
         style={{ animation: `cardIn 0.25s ease 0.05s both` }}
       >
         {/* Teal header stripe */}
@@ -93,7 +106,7 @@ export default function PaymentProcessingOverlay({ onComplete }: Props) {
             <MdTrain size={32} color={TEAL} aria-hidden="true" />
           </div>
 
-          <p className="text-base font-bold text-gray-900 mb-1">Processing payment</p>
+          <p id="payment-processing-title" className="text-base font-bold text-gray-900 mb-1">Processing payment</p>
 
           {/* Animated ellipsis */}
           <p className="text-sm text-gray-400 mb-7 flex items-center justify-center gap-0.5">

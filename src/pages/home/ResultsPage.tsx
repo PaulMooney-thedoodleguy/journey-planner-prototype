@@ -9,7 +9,7 @@ import JourneyDetailPanel from '../../components/journey/JourneyDetailPanel';
 import PageShell from '../../components/layout/PageShell';
 import BottomDrawer from '../../components/layout/BottomDrawer';
 import MapView from '../../components/map/MapView';
-import { getDurationMins, getRoutePolyline } from '../../utils/transport';
+import { getDurationMins, getRoutePolyline, getModeHex } from '../../utils/transport';
 import { getDisruptionsService } from '../../services/transport.service';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { ROUTE_STATION_COORDS } from '../../data/stations';
@@ -35,25 +35,23 @@ const mapMarkers: MapMarker[] = tflStops.map(s => ({
 
 export default function ResultsPage() {
   const navigate = useNavigate();
-  const { journeyResults, searchParams, setSelectedJourney } = useJourneyContext();
+  const { journeyResults, searchParams, setSelectedJourney, pendingJourney, setPendingJourney } = useJourneyContext();
   const { savedJourneys, addSavedJourney, removeSavedJourney } = useAppContext();
   const { isLoggedIn, openLoginModal } = useAuthContext();
 
   const [expandedJourney, setExpandedJourney] = useState<Journey | null>(null);
   const [signInBannerDismissed, setSignInBannerDismissed] = useState(false);
 
-  // Holds a journey the user tried to book while signed out — fulfilled after login
-  const pendingJourneyRef = useRef<Journey | null>(null);
-
-  // When the user signs in, complete any pending booking automatically
+  // When the user signs in, complete any pending booking automatically.
+  // pendingJourney lives in JourneyContext so it survives navigation away from this page.
   useEffect(() => {
-    if (isLoggedIn && pendingJourneyRef.current) {
-      const journey = pendingJourneyRef.current;
-      pendingJourneyRef.current = null;
+    if (isLoggedIn && pendingJourney) {
+      const journey = pendingJourney;
+      setPendingJourney(null);
       setSelectedJourney(journey);
       navigate('/checkout');
     }
-  }, [isLoggedIn, navigate, setSelectedJourney]);
+  }, [isLoggedIn, pendingJourney, setPendingJourney, setSelectedJourney, navigate]);
 
   const getSavedId = (j: Journey): string | undefined =>
     savedJourneys.find(sj => sj.journeyData?.id === j.id && sj.date === searchParams.date)?.id;
@@ -85,7 +83,7 @@ export default function ResultsPage() {
 
   const handleBook = (journey: Journey) => {
     if (!isLoggedIn) {
-      pendingJourneyRef.current = journey;
+      setPendingJourney(journey);
       openLoginModal('Sign in to book your ticket — your journey details will be saved to your wallet.');
       return;
     }
@@ -376,6 +374,7 @@ export default function ResultsPage() {
             showBusStops={!expandedJourney}
             center={expandedJourney ? undefined : mapCenter}
             routePolyline={routePolyline}
+            routeColor={expandedJourney ? getModeHex(expandedJourney.type) : undefined}
             height="100%"
           />
         </div>

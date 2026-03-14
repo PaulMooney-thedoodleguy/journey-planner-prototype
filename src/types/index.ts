@@ -207,6 +207,7 @@ export interface MapViewProps {
   activeModes?: Set<TransportMode>;
   onModeChange?: (modes: Set<TransportMode>) => void;
   routePolyline?: { lat: number; lng: number }[];
+  routeColor?: string;
   polylines?: MapPolyline[];
   circles?: MapCircle[];
   vehicleMarker?: { lat: number; lng: number; direction?: number };

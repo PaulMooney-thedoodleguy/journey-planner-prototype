@@ -84,6 +84,10 @@ function mapLeg(leg: OtpLeg): JourneyLeg {
           : s.arrivalTime  ? formatTime(s.arrivalTime)
           : '',
     })),
+    fromLat: leg.from.lat,
+    fromLng: leg.from.lon,
+    toLat: leg.to.lat,
+    toLng: leg.to.lon,
   };
 }
 

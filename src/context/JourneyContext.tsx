@@ -12,6 +12,8 @@ interface JourneyContextValue {
   searchError: string | null;
   selectedJourney: Journey | null;
   setSelectedJourney: (j: Journey | null) => void;
+  pendingJourney: Journey | null;
+  setPendingJourney: (j: Journey | null) => void;
   passengerDetails: PassengerDetails;
   setPassengerDetails: (d: PassengerDetails) => void;
   lastBookingRef: string | null;
@@ -37,6 +39,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedJourney, setSelectedJourney] = useState<Journey | null>(null);
+  const [pendingJourney,  setPendingJourney]  = useState<Journey | null>(null);
   const [passengerDetails, setPassengerDetails] = useState<PassengerDetails>({
     name: '', email: '',
   });
@@ -133,6 +136,7 @@ export function JourneyProvider({ children }: { children: ReactNode }) {
       searchParams, setSearchParams,
       journeyResults, isSearching, searchError,
       selectedJourney, setSelectedJourney,
+      pendingJourney, setPendingJourney,
       passengerDetails, setPassengerDetails,
       lastBookingRef,
       submitSearch, completePayment, resetJourney,

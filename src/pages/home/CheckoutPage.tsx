@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard } from 'lucide-react';
 import { SiGooglepay, SiApplepay, SiPaypal } from 'react-icons/si';
@@ -53,13 +53,25 @@ export default function CheckoutPage() {
     if (errors.cardNumber) setErrors(prev => { const n = { ...prev }; delete n.cardNumber; return n; });
   };
 
-  const completeAndNavigate = () => {
+  const completeAndNavigate = useCallback(() => {
     completePayment(searchParams.ticketType);
     navigate('/confirmation');
-  };
+  }, [completePayment, navigate, searchParams.ticketType]);
 
-  // Express payment — bypass card validation, show processing overlay
+  // Express payment — validates name + email but bypasses card number
   const handleExpressPayment = (method: PaymentMethod) => {
+    const newErrors: Record<string, string> = {};
+    if (!passengerDetails.name.trim()) newErrors.name = 'Please enter your full name';
+    if (!passengerDetails.email.trim()) {
+      newErrors.email = 'Please enter your email address';
+    } else if (!/\S+@\S+\.\S+/.test(passengerDetails.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      requestAnimationFrame(() => errorSummaryRef.current?.focus());
+      return;
+    }
     setPaymentMethod(method);
     setIsProcessing(true);
   };
@@ -90,6 +102,7 @@ export default function CheckoutPage() {
   return (
     <>
     {isProcessing && <PaymentProcessingOverlay onComplete={completeAndNavigate} />}
+    <div aria-hidden={isProcessing || undefined}>
     <PageShell>
       <button onClick={() => navigate('/results')} className="mb-4 text-brand hover:text-brand-hover font-medium text-sm flex items-center gap-2">
         ← Back to Results
@@ -223,6 +236,7 @@ export default function CheckoutPage() {
         </form>
       </div>
     </PageShell>
+    </div>
     </>
   );
 }

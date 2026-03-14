@@ -53,7 +53,7 @@ export default function TicketDetailPage() {
     : undefined;
 
   useEffect(() => {
-    getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions));
+    getDisruptionsService().then(s => s.getDisruptions().then(setDisruptions)).catch(() => {});
   }, []);
 
   // Keep screen on while displaying QR code

@@ -82,13 +82,13 @@ describe('CheckoutPage — autocomplete attributes (QA-9)', () => {
 describe('CheckoutPage — error summary (QA-3)', () => {
   it('shows error summary when form is submitted with all fields empty', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     expect(await screen.findByText('There is a problem')).toBeInTheDocument();
   });
 
   it('error summary contains all three error messages as links', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     // Each error appears in both the summary (as an <a>) and below the field (as a <p>).
     // We specifically assert the summary links so the test targets the right elements.
     expect(await screen.findByRole('link', { name: 'Please enter your full name' })).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe('CheckoutPage — error summary (QA-3)', () => {
 
   it('error summary links point to the correct input ids', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     await screen.findByText('There is a problem');
 
     const links = screen.getAllByRole('link');
@@ -110,14 +110,14 @@ describe('CheckoutPage — error summary (QA-3)', () => {
 
   it('name input gets aria-invalid=true after failed submit', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     await screen.findByText('There is a problem');
     expect(screen.getByLabelText('Full Name')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('name input has aria-describedby pointing to its error message', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     await screen.findByText('There is a problem');
     const nameInput = screen.getByLabelText('Full Name');
     const describedBy = nameInput.getAttribute('aria-describedby');
@@ -128,7 +128,7 @@ describe('CheckoutPage — error summary (QA-3)', () => {
 
   it('error summary disappears after errors are resolved', async () => {
     await renderCheckout();
-    fireEvent.submit(screen.getByRole('button', { name: /pay/i }).closest('form')!);
+    fireEvent.submit(screen.getByRole('button', { name: /^pay £/i }).closest('form')!);
     await screen.findByText('There is a problem');
     // Typing in the name field clears the name error
     fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'John Smith' } });

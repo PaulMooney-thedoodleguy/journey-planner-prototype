@@ -59,10 +59,11 @@ export function getDirectionRotation(dir: string): number {
 }
 
 export function getDurationMins(duration: string): number {
-  const match = duration.match(/(?:(\d+)h\s*)?(\d+)m/);
-  if (!match) return 0;
-  const hours = parseInt(match[1] ?? '0');
-  const mins = parseInt(match[2] ?? '0');
+  const hMatch = duration.match(/(\d+)\s*h/);
+  const mMatch = duration.match(/(\d+)\s*m(?:in)?s?/);
+  if (!hMatch && !mMatch) return 0;
+  const hours = hMatch ? parseInt(hMatch[1]) : 0;
+  const mins  = mMatch ? parseInt(mMatch[1]) : 0;
   return hours * 60 + mins;
 }
 
